@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MainActivity"
+    android:id="@+id/relativeLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp">
+
+        <!-- ====== CABECERA: Imagen central con elementos superpuestos ====== -->
+        <FrameLayout
+            android:id="@+id/header_container"
+            android:layout_width="0dp"
+            android:layout_height="162dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Fondo -->
+            <ImageView
+                android:id="@+id/titu"
+                android:layout_width="match_parent"
+                android:layout_height="183dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/titu" />
+
+            <!-- Logo arriba izquierda -->
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_gravity="start|top"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/ic__stream_launcher" />
+
+            <!-- Texto versión bajo el logo -->
+            <TextView
+                android:id="@+id/textView6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="V5.0"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:layout_gravity="start|top"
+                android:layout_marginStart="28dp"
+                android:layout_marginTop="80dp" />
+
+            <!-- PayPal (izquierda, abajo) -->
+            <ImageView
+                android:id="@+id/donaciones"
+                android:layout_width="83dp"
+                android:layout_height="22dp"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="12dp"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/paypa" />
+
+            <!-- 2529potify (centro, abajo) -->
+            <ImageView
+                android:id="@+id/potifyy"
+                android:layout_width="130dp"
+                android:layout_height="45dp"
+                android:layout_gravity="center|bottom"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/potifyy" />
+
+            <!-- Chat (derecha, abajo) -->
+            <Button
+                android:id="@+id/btnchat"
+                android:layout_width="77dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end|bottom"
+                android:layout_marginEnd="12dp"
+                android:layout_marginBottom="12dp"
+                android:backgroundTint="#FFFFFF"
+                android:text="CHAT (BETA)"
+                android:textColor="#000000"
+                android:textSize="10sp" />
+        </FrameLayout>
+
+        <!-- ====== FILA 1: NAVEGADOR / DESCARGADOR / DESCARGAS ====== -->
+        <Button
+            android:id="@+id/btn_navegador"
+            android:layout_width="105dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#2196F3"
+            android:text="NAVEGADOR"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toStartOf="@id/btn_descargas"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/header_container" />
+
+        <Button
+            android:id="@+id/btn_descargas"
+            android:layout_width="120dp"
+            android:layout_height="49dp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#BBA600"
+            android:text="DESCARGADOR"
+            android:textAllCaps="true"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            app:layout_constraintStart_toEndOf="@id/btn_navegador"
+            app:layout_constraintEnd_toStartOf="@id/descarg"
+            app:layout_constraintTop_toTopOf="@id/btn_navegador" />
+
+        <Button
+            android:id="@+id/descarg"
+            android:layout_width="105dp"
+            android:layout_height="49dp"
+            android:backgroundTint="#0C9936"
+            android:text="DESCARGAS"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btn_descargas"
+            app:layout_constraintTop_toTopOf="@id/btn_navegador" />
+
+        <!-- ====== FILA 2: REPRODUCTOR / NUBE / V.5.0 ====== -->
+        <Button
+            android:id="@+id/btn_reproductor"
+            android:layout_width="118dp"
+            android:layout_height="61dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#AA1C34"
+            android:text="REPRODUCTOR DE VIDEO"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnaudio"
+            app:layout_constraintTop_toBottomOf="@id/btn_navegador" />
+
+        <Button
+            android:id="@+id/btnaudio"
+            android:layout_width="120dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#D35400"
+            android:text="NUBE STORAGE"
+            android:textAllCaps="true"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toStartOf="@id/btn_ver"
+            app:layout_constraintStart_toEndOf="@id/btn_reproductor"
+            app:layout_constraintTop_toTopOf="@id/btn_reproductor" />
+
+        <Button
+            android:id="@+id/btn_ver"
+            android:layout_width="78dp"
+            android:layout_height="47dp"
+            android:backgroundTint="#676767"
+            android:text="V.5.0"
+            android:textAllCaps="true"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btnaudio"
+            app:layout_constraintTop_toTopOf="@id/btnaudio" />
+
+        <!-- ====== SPINNER ====== -->
+        <Spinner
+            android:id="@+id/spinner_activities"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_marginTop="5dp"
+            android:background="#000000"
+            android:backgroundTint="#FFFFFF"
+            app:layout_constraintTop_toBottomOf="@id/btn_reproductor"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- ====== TÍTULO ====== -->
+        <TextView
+            android:id="@+id/agregados"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Agregados Recientemente"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@id/spinner_activities"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- ====== POSTERS ====== -->
+        <ImageView
+            android:id="@+id/spidey"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:layout_marginTop="6dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/spiderman"
+            app:layout_constraintTop_toBottomOf="@id/agregados"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/sony"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/son"
+            app:layout_constraintTop_toBottomOf="@id/spidey"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/avatar"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/avatar"
+            app:layout_constraintTop_toBottomOf="@id/sony"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/prop"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/propues"
+            app:layout_constraintTop_toBottomOf="@id/avatar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/cnn"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/cnnn"
+            app:layout_constraintTop_toBottomOf="@id/prop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageView
+            android:id="@+id/espn"
+            android:layout_width="0dp"
+            android:layout_height="150dp"
+            android:layout_marginBottom="16dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            app:srcCompat="@mipmap/es"
+            app:layout_constraintTop_toBottomOf="@id/cnn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Guideline opcional -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.09" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

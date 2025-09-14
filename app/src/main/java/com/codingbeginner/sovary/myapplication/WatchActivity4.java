@@ -1,0 +1,265 @@
+package com.codingbeginner.sovary.myapplication;
+
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAd;
+import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoadCallback;
+
+public class WatchActivity4 extends AppCompatActivity {
+    ExoPlayer exoPlayer;
+    ImageView bt_fullscreen;
+    boolean isFullScreen=false;
+    boolean isLock = false;
+    Handler handler;
+    long playbackPosition = 0; // Guardar la posición de reproducción
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_watch4);
+
+
+
+        handler = new Handler(Looper.getMainLooper());
+
+        PlayerView playerView = findViewById(R.id.player);
+        ProgressBar progressBar = findViewById(R.id.progress_bar);
+        bt_fullscreen = findViewById(R.id.bt_fullscreen);
+        ImageView bt_lockscreen = findViewById(R.id.exo_lock);
+
+        // Restaurar la posición de reproducción si existe
+        if (savedInstanceState != null) {
+            playbackPosition = savedInstanceState.getLong("PLAYBACK_POSITION", 0);
+        }
+
+        bt_fullscreen.setOnClickListener(view -> {
+            if (!isFullScreen) {
+                bt_fullscreen.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_baseline_fullscreen_exit));
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+            } else {
+                bt_fullscreen.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_baseline_fullscreen));
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            }
+            isFullScreen = !isFullScreen;
+        });
+
+
+        bt_lockscreen.setOnClickListener(view -> {
+            if (!isLock) {
+                bt_lockscreen.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_baseline_lock));
+            } else {
+                bt_lockscreen.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_outline_lock_open));
+            }
+            isLock = !isLock;
+            lockScreen(isLock);
+        });
+
+        exoPlayer = new ExoPlayer.Builder(this)
+                .setSeekBackIncrementMs(5000)
+                .setSeekForwardIncrementMs(5000)
+                .build();
+        playerView.setPlayer(exoPlayer);
+        playerView.setKeepScreenOn(true);
+
+        exoPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(int playbackState) {
+                if (playbackState == Player.STATE_BUFFERING) {
+                    progressBar.setVisibility(View.VISIBLE);
+                } else if (playbackState == Player.STATE_READY) {
+                    progressBar.setVisibility(View.GONE);
+                }
+
+                if (!exoPlayer.getPlayWhenReady()) {
+                    handler.removeCallbacks(updateProgressAction);
+                } else {
+                    onProgress();
+                }
+            }
+        });
+
+        String videoUrl = getIntent().getStringExtra("VIDEO_URL");
+        if (videoUrl != null) {
+            Uri uri = Uri.parse(videoUrl);
+            MediaItem mediaItem = MediaItem.fromUri(uri);
+            exoPlayer.setMediaItem(mediaItem);
+            exoPlayer.prepare();
+            exoPlayer.seekTo(playbackPosition); // Restaurar la posición de reproducción
+            exoPlayer.play();
+        }
+    }
+
+
+
+
+    private Runnable updateProgressAction = this::onProgress;
+
+    long ad = 4000;
+    boolean check = false;
+
+    private void onProgress() {
+        ExoPlayer player = exoPlayer;
+        long position = player == null ? 0 : player.getCurrentPosition();
+        handler.removeCallbacks(updateProgressAction);
+        int playbackState = player == null ? Player.STATE_IDLE : player.getPlaybackState();
+        if (playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
+            long delayMs;
+            if (player.getPlayWhenReady() && playbackState == Player.STATE_READY) {
+                delayMs = 1000 - position % 1000;
+                if (delayMs < 200) {
+                    delayMs += 1000;
+                }
+            } else {
+                delayMs = 1000;
+            }
+
+            if ((ad - 3000 <= position && position <= ad) && !check) {
+                check = true;
+                initAd();
+            }
+            handler.postDelayed(updateProgressAction, delayMs);
+        }
+    }
+
+    RewardedInterstitialAd rewardedInterstitialAd = null;
+
+    private void initAd() {
+        if (rewardedInterstitialAd != null) return;
+        MobileAds.initialize(this);
+        RewardedInterstitialAd.load(this, "ca-app-pub-3940256099942544/5354046379",
+                new AdRequest.Builder().build(), new RewardedInterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull RewardedInterstitialAd p0) {
+                        rewardedInterstitialAd = p0;
+                        rewardedInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                            @Override
+                            public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                                Log.d("WatchActivity_AD", adError.getMessage());
+                            }
+
+                            @Override
+                            public void onAdShowedFullScreenContent() {
+                                handler.removeCallbacks(updateProgressAction);
+                            }
+
+                            @Override
+                            public void onAdDismissedFullScreenContent() {
+                                exoPlayer.setPlayWhenReady(true);
+                                rewardedInterstitialAd = null;
+                                check = false;
+                            }
+                        });
+                        LinearLayout sec_ad_countdown = findViewById(R.id.sect_ad_countdown);
+                        TextView tx_ad_countdown = findViewById(R.id.tx_ad_countdown);
+                        sec_ad_countdown.setVisibility(View.VISIBLE);
+                        new CountDownTimer(4000, 1000) {
+                            @Override
+                            public void onTick(long l) {
+                                tx_ad_countdown.setText("Ad in " + l / 1000);
+                            }
+
+                            @Override
+                            public void onFinish() {
+                                sec_ad_countdown.setVisibility(View.GONE);
+                                rewardedInterstitialAd.show(WatchActivity4.this, rewardItem -> {
+
+                                });
+                            }
+                        }.start();
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        rewardedInterstitialAd = null;
+                    }
+                });
+    }
+
+
+
+    void lockScreen(boolean lock) {
+        LinearLayout sec_mid = findViewById(R.id.sec_controlvid1);
+        LinearLayout sec_bottom = findViewById(R.id.sec_controlvid2);
+        if (lock) {
+            sec_mid.setVisibility(View.INVISIBLE);
+            sec_bottom.setVisibility(View.INVISIBLE);
+        } else {
+            sec_mid.setVisibility(View.VISIBLE);
+            sec_bottom.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isLock) return;
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            bt_fullscreen.performClick();
+        } else super.onBackPressed();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        exoPlayer.stop();
+        // Guardar la posición de reproducción cuando la actividad se detiene
+        playbackPosition = exoPlayer.getCurrentPosition();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        exoPlayer.release();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        exoPlayer.pause();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // Guardar la posición de reproducción antes de que se destruya la actividad
+        outState.putLong("PLAYBACK_POSITION", playbackPosition);
+    }
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        int orientation = newConfig.orientation;
+        switch (orientation) {
+            case Configuration.ORIENTATION_LANDSCAPE:
+            case Configuration.ORIENTATION_PORTRAIT:
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                break;
+            default:
+                break;
+        }
+    }
+}

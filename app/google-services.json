@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "387107800829",
+    "project_id": "easy-chat-backend-6ae82",
+    "storage_bucket": "easy-chat-backend-6ae82.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:387107800829:android:df8c5aedd11daf8849e094",
+        "android_client_info": {
+          "package_name": "com.codingbeginner.sovary.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqZ1tHPUjJHxljw9WKlMg1_Q5ikXEh26A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

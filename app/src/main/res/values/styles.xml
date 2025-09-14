@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="ClickableView">
+        <item name="colorControlHighlight">@android:color/darker_gray</item>
+        <item name="android:background">?selectableItemBackgroundBorderless</item>
+    </style>
+
+    <style name="AppTheme.FullScreen" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <style name="SpinnerTheme" parent="Theme.AppCompat.Light">
+        <item name="colorControlNormal">#F44336</item> <!-- Cambia el color aquí -->
+        <!-- Otros atributos según sea necesario -->
+    </style>
+
+    <style name="ButtonWhiteBlackText" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/button_white</item>
+        <item name="android:textColor">@color/black</item>
+    </style>
+
+</resources>

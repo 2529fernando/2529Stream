@@ -1,0 +1,16 @@
+<!-- list_item_video.xml -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/imageViewThumbnail"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:scaleType="centerCrop"
+        android:background="#FFFFFF"/> <!-- Fondo blanco para la imagen -->
+
+    <!-- Otros elementos si es necesario -->
+
+</RelativeLayout>
