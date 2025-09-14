@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
 
-    private boolean isResetting = false; // evita re-entrada al resetear el spinner
+    private boolean isResetting = false;  // evita re-entrada al resetear el spinner
     private boolean isBound = false;
 
     private AudioService audioService;
@@ -32,7 +32,12 @@ public class MainActivity extends AppCompatActivity {
         @Override public void onServiceConnected(ComponentName className, IBinder service) {
             AudioService.LocalBinder binder = (AudioService.LocalBinder) service;
             audioService = binder.getService();
-            audioService.showNotification();
+            // Solo mostrar notificación si tienes permiso (API 33+ requiere POST_NOTIFICATIONS)
+            if (Build.VERSION.SDK_INT < 33 ||
+                    ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)
+                            == PackageManager.PERMISSION_GRANTED) {
+                audioService.showNotification();
+            }
             isBound = true;
         }
         @Override public void onServiceDisconnected(ComponentName arg0) {
@@ -49,13 +54,13 @@ public class MainActivity extends AppCompatActivity {
         checkAndRequestPermissions();
         configureOnClickListeners();
         configureSpinner();
-        // Si quieres iniciar y enlazar el servicio de audio al abrir la app, descomenta:
-        // startAudioService();
+        // startAudioService();  // opcional: inicia/enciende el servicio al abrir la app
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
+        // Desenlaza si está enlazado para evitar fugas
         if (isBound) {
             unbindService(serviceConnection);
             isBound = false;
@@ -65,16 +70,16 @@ public class MainActivity extends AppCompatActivity {
     /** ==== Permisos según versión de Android ==== */
     private void checkAndRequestPermissions() {
         if (Build.VERSION.SDK_INT >= 33) {
-            // Android 13+ (Tiramisu): leen medios por tipo y notificaciones aparte
+            // Android 13+: permisos granulares de medios + notificaciones
             String[] needed = new String[] {
                     Manifest.permission.READ_MEDIA_AUDIO,
                     Manifest.permission.READ_MEDIA_VIDEO,
                     Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.POST_NOTIFICATIONS // si muestras notificaciones del servicio
+                    Manifest.permission.POST_NOTIFICATIONS
             };
             requestIfNeeded(needed);
         } else {
-            // Android 12 y anteriores
+            // Android 12-
             String[] needed = new String[] {
                     Manifest.permission.READ_EXTERNAL_STORAGE
             };
@@ -83,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestIfNeeded(String[] permissions) {
-        // Reúne sólo las que faltan
         java.util.ArrayList<String> toRequest = new java.util.ArrayList<>();
         for (String p : permissions) {
             if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
@@ -99,9 +103,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            // Aquí podrías reaccionar si faltó algo crítico
-        }
+        // Aquí puedes actuar si faltó algo crítico; por ahora no es obligatorio
     }
 
     /** ==== Click listeners ==== */
@@ -128,8 +130,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.espn).setOnClickListener(v -> openWebView("https://tvlibreonline.org/en-vivo/espn/"));
         findViewById(R.id.spidey).setOnClickListener(v -> openWebView("https://kllamrd.org/video/tt10872600/"));
         findViewById(R.id.sony).setOnClickListener(v -> openWebView("https://www.cablevisionhd.com/canal-sony-en-vivo.html"));
-
-        // NOTA: Se eliminó R.id.boing porque no existe en tu XML actual.
+        // Nota: R.id.boing se eliminó porque no existe en el XML actual.
     }
 
     private void startNewActivity(Class<?> activityClass) {
@@ -148,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
         startService(intent);
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
 
-        // Si NO quieres abrir una WebActivity al iniciar el servicio, comenta lo de abajo:
+        // Si NO quieres abrir una web al iniciar el servicio, comenta las 2 líneas siguientes.
         Intent intent2 = new Intent(MainActivity.this, WebActivity.class);
         startActivity(intent2);
     }
@@ -175,8 +176,7 @@ public class MainActivity extends AppCompatActivity {
                 if (isResetting) return;
                 if (position != 0) {
                     startActivityBasedOnSelection(position);
-
-                    // Reset a la opción 0 sin animación y evitando re-llamada
+                    // Reset a la opción 0 sin re-entrar
                     isResetting = true;
                     spinner.post(() -> {
                         spinner.setSelection(0, false);

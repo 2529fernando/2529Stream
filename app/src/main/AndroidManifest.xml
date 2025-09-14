@@ -1,21 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- Red -->
+
+    <!-- ===== Permisos de red ===== -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" /> <!-- Services en primer plano (reproducción) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ===== Servicios en primer plano (reproducción) ===== -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" /> <!-- Notificaciones (Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- Lectura de medios (Android 13+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- ===== Notificaciones (Android 13+) ===== -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ===== Lectura de medios (Android 13+) ===== -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> <!-- Compatibilidad Android 12- -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- ===== Compatibilidad Android 12- ===== -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" /> <!-- Escritura en almacenamiento público (solo necesario hasta Android 9 / API 28) -->
+        android:maxSdkVersion="32" />
+
+    <!-- ===== Escritura pública (sólo necesario hasta Android 9 / API 28) ===== -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" /> <!-- Permitir instalar APKs desde tu app (Android 8.0+) -->
+        android:maxSdkVersion="28" />
+
+    <!-- ===== Permitir instalación de APKs desde la app (Android 8.0+) ===== -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -27,15 +40,260 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ExoPlayerJava"
         tools:targetApi="29">
+
+        <!-- ===== Activities sin subpaquete ficticio (.fernan) ===== -->
+
+        <!-- Lanzador -->
         <activity
-            android:name=".prueba2"
+            android:name="com.fernan2529.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Varias pantallas (antes .fernan.*) -->
+        <activity android:name="com.fernan2529.MainActivity2"
+            android:configChanges="orientation|screenSize"
             android:exported="false" />
-        <activity
-            android:name="com.fernan2529.prueba"
+        <activity android:name="com.fernan2529.MainActivity3"
+            android:configChanges="orientation|screenSize"
             android:exported="false" />
-        <activity
-            android:name=".anime1"
-            android:exported="false" /> <!-- FileProvider (respaldo para convertir File a content:// si alguna vez lo necesitas) -->
+        <activity android:name="com.fernan2529.MainActivity4"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity5"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity6"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity7"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity8"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity9"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity10"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity11"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity12"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity13"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivity14"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.MainActivityfin"
+            android:exported="false" />
+
+        <!-- Anime/Series/Películas -->
+        <activity android:name="com.fernan2529.anime1"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.anime2"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.anime3"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.anime4"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.anime5"
+            android:exported="false" />
+
+        <activity android:name="com.fernan2529.series1"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.series2"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.series3"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.series4"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.series5"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.series6"
+            android:exported="false" />
+
+        <activity android:name="com.fernan2529.peliculas1"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.doramas1"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.doramas2"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+
+        <!-- WebView / Navegación -->
+        <activity android:name="com.fernan2529.Navegation"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.WebViewActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WebViewActivity2"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WebViewActivity3"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WebViewActivity4"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WebViewActivity5"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.WebViewActivity6"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WebViewActivity7"
+            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+
+        <activity android:name="com.fernan2529.webtwo"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.webthree"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.webfour"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.webnavegation1"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+
+        <!-- Watch / Reproductores -->
+        <activity android:name="com.fernan2529.Reproductor"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+
+        <activity android:name="com.fernan2529.WatchActivity"
+            android:configChanges="orientation|screenSize|screenLayout"
+            android:screenOrientation="sensor"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen"
+            tools:ignore="DiscouragedApi" />
+
+        <activity android:name="com.fernan2529.WatchActivitytwo"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity3"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity4"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity5"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity6"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity7"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivity8"
+            android:autoVerify="true"
+            android:configChanges="orientation|screenSize"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen">
+            <intent-filter tools:ignore="AppLinkUrlError">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
+        <activity android:name="com.fernan2529.WatchActivityfour"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
+        <activity android:name="com.fernan2529.WatchActivitythree"
+            android:exported="false" />
+
+        <!-- Descargas / Navegador / Utilidades -->
+        <activity android:name="com.fernan2529.DownloadlinkActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.DownloadActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.desactivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.Navegation"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+
+        <!-- Música / Audio -->
+        <activity android:name="com.fernan2529.musicactivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.nubeactivity"
+            android:exported="false" />
+
+        <!-- Chat / Splash / Login -->
+        <activity android:name="com.fernan2529.MainActivitychat"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.SplashActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.LoginOtpActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.LoginUsernameActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.LoginPhoneNumberActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.ChatActivity"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.texting"
+            android:exported="false" />
+
+        <!-- Varias -->
+        <activity android:name="com.fernan2529.version"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.donaciones"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.propu"
+            android:configChanges="orientation|screenSize"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.Notification1"
+            android:exported="false" />
+        <activity android:name="com.fernan2529.Notification2"
+            android:exported="false" />
+
+        <!-- Si existen en tu código -->
+        <activity android:name="com.fernan2529.prueba"
+            android:exported="false" />
+        <activity android:name=".prueba2"
+            android:exported="false" />
+
+        <!-- ===== FileProvider ===== -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -44,334 +302,45 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
-        </provider> <!-- Activity que maneja el WebView de descargas/instalación -->
-        <activity
-            android:name=".fernan.version"
-            android:exported="false" /> <!-- ACTIVITIES (dejo tus pantallas; solo exported=true donde hay intent-filters) -->
-        <activity
-            android:name=".fernan.WatchActivity8"
-            android:autoVerify="true"
-            android:configChanges="orientation|screenSize"
-            android:exported="true"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen">
-            <intent-filter tools:ignore="AppLinkUrlError">
-                <action android:name="android.intent.action.VIEW" />
+        </provider>
 
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data android:mimeType="video/*" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".fernan.WatchActivity"
-            android:configChanges="orientation|screenSize|screenLayout"
-            android:screenOrientation="sensor"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen"
-            tools:ignore="DiscouragedApi" />
-        <activity
-            android:name=".fernan.MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity> <!-- Todas las demás activities sin intent-filters pueden permanecer exported="false" -->
-        <activity
-            android:name=".fernan.series6"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivityfin"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity7"
-            android:configChanges="orientation|screenSize|keyboardHidden|keyboard|screenLayout|smallestScreenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.WatchActivityfour"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.nubeactivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivitythree"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.webnavegation1"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.WebActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity6"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.musicactivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.desactivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.anime5"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.series5"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity5"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.texting"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivitychat"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.LoginOtpActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.LoginUsernameActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.ChatActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.LoginPhoneNumberActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.SplashActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.Notification2"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.Notification1"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.DownloadlinkActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.DownloadActivity"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.AdBlockWebViewClient"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.Navegation"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.donaciones"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivity7"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.series4"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.peliculas1"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.doramas2"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity4"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.series3"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivity5"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.doramas1"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity14"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.anime4"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.anime3"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.Reproductor"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivity6"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.anime2"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.anime1"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity13"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity12"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity11"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity10"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity9"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity8"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity7"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity3"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.WatchActivity4"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.MainActivity6"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity5"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.series2"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivity3"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.series1"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity4"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WatchActivitytwo"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.WebViewActivity2"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.MainActivity3"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.MainActivity2"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.WebViewActivity"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.propu"
-            android:configChanges="orientation|screenSize"
-            android:exported="false" />
-        <activity
-            android:name=".fernan.webfour"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.webthree"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" />
-        <activity
-            android:name=".fernan.webtwo"
-            android:configChanges="orientation|screenSize"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar.FullScreen" /> <!-- Google Ads -->
+        <!-- ===== Google Ads (demo ID) ===== -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" /> <!-- Receivers -->
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- ===== Receivers ===== -->
         <receiver
-            android:name=".fernan.NotificationActionReceiver"
-            android:exported="false" /> <!-- Services -->
+            android:name="com.fernan2529.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!-- ===== Services ===== -->
         <service
-            android:name=".fernan.WebViewBackgroundPlaybackService"
+            android:name="com.fernan2529.WebViewBackgroundPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <service
-            android:name=".fernan.SimpleExoPlayerService"
+            android:name="com.fernan2529.SimpleExoPlayerService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <service
-            android:name=".fernan.YourPlaybackService"
+            android:name="com.fernan2529.YourPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <service
-            android:name=".fernan.FCMNotificationService"
+            android:name="com.fernan2529.FCMNotificationService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
         <service
-            android:name=".fernan.AudioService"
+            android:name="com.fernan2529.AudioService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
         <service
-            android:name=".fernan.AudioService2"
+            android:name="com.fernan2529.AudioService2"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
