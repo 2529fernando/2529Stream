@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.codingbeginner.sovary.myapplication'
+    namespace 'com.fernan2529'
     compileSdkVersion 35
 
     defaultConfig {
-        applicationId "com.codingbeginner.sovary.myapplication"
+        applicationId "com.fernan2529"
         minSdkVersion 23
         targetSdkVersion 35
         versionCode 1
