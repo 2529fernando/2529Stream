@@ -38,38 +38,40 @@
                 app:srcCompat="@mipmap/titu" />
 
             <!-- Logo arriba izquierda -->
-            <ImageView
-                android:id="@+id/logo"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="12dp"
-                android:layout_gravity="start|top"
-                android:contentDescription="@string/app_name"
-                app:srcCompat="@mipmap/ic__stream_launcher" />
-
-            <!-- Texto versión bajo el logo -->
-            <TextView
-                android:id="@+id/textView6"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="V5.0"
-                android:textColor="#FFFFFF"
-                android:textSize="12sp"
-                android:layout_gravity="start|top"
-                android:layout_marginStart="28dp"
-                android:layout_marginTop="80dp" />
 
             <!-- PayPal (izquierda, abajo) -->
             <ImageView
+                android:id="@+id/logo"
+                android:layout_width="wrap_content"
+                android:layout_height="61dp"
+                android:layout_gravity="start|top"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/ic__stream_launcher" />
+
+            <!-- Botón Juegos debajo de PayPal -->
+            <ImageView
                 android:id="@+id/donaciones"
-                android:layout_width="83dp"
-                android:layout_height="22dp"
+                android:layout_width="67dp"
+                android:layout_height="40dp"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="20dp"
+                android:layout_marginBottom="60dp"
+                android:contentDescription="@string/app_name"
+                app:srcCompat="@mipmap/paypa" />
+
+            <Button
+                android:id="@+id/btn_juegos"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
                 android:layout_gravity="start|bottom"
                 android:layout_marginStart="12dp"
                 android:layout_marginBottom="12dp"
-                android:contentDescription="@string/app_name"
-                app:srcCompat="@mipmap/paypa" />
+                android:backgroundTint="#FF9800"
+                android:text="JUEGOS"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp" />
 
             <!-- 2529potify (centro, abajo) -->
             <ImageView

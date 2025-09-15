@@ -1,2 +1,24 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        // Versiones de plugins (ajústalas si usas otra versión de Android Studio)
+        id("com.android.application") version '8.13.0'
+        id("com.google.gms.google-services") version "4.4.1"
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") } // necesario para ccp e imagepicker
+    }
+}
+
 rootProject.name = "2529Stream"
-include ':app'
+include(":app")

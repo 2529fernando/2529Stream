@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
     private void configureOnClickListeners() {
         // Cabecera
         findViewById(R.id.donaciones).setOnClickListener(v -> startNewActivity(donaciones.class));
+        findViewById(R.id.btn_juegos).setOnClickListener(v -> startNewActivity(JuegosActivity.class));
         findViewById(R.id.potifyy).setOnClickListener(v -> startNewActivity(musicactivity.class));
         findViewById(R.id.btnchat).setOnClickListener(v -> startNewActivity(SplashActivity.class));
 
