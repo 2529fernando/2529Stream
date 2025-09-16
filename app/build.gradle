@@ -81,3 +81,28 @@ dependencies {
     implementation 'com.github.dhaval2404:imagepicker:2.1'
 }
 
+def apkOutDir = "$projectDir/apk"
+
+tasks.register("copyApkDebug", Copy) {
+    from("$buildDir/outputs/apk/debug/")
+    include("*.apk")
+    into("$apkOutDir/debug")
+    rename { "app-debug.apk" }
+}
+
+tasks.register("copyApkRelease", Copy) {
+    from("$buildDir/outputs/apk/release/")
+    include("*.apk")
+    into("$apkOutDir/release")
+    rename { "app-release-unsigned.apk" }
+}
+
+afterEvaluate {
+    tasks.matching { it.name == "assembleDebug" }.configureEach {
+        finalizedBy("copyApkDebug")
+    }
+    tasks.matching { it.name == "assembleRelease" }.configureEach {
+        finalizedBy("copyApkRelease")
+    }
+}
+
