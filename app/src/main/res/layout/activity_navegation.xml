@@ -126,7 +126,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:padding="10dp"
         android:src="@drawable/ic_tabs"
-        android:contentDescription="@string/tabs"
+        android:entries="@array/tabs"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/web_share"
         app:layout_constraintStart_toEndOf="@id/web_refresh"

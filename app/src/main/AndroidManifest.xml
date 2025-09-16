@@ -30,6 +30,9 @@
         android:usesCleartextTraffic="false"
         tools:targetApi="29">
         <activity
+            android:name=".cabiosgit"
+            android:exported="false" />
+        <activity
             android:name=".SpinnerActivity"
             android:exported="false" />
         <activity

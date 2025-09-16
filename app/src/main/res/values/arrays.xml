@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <string-array name="tabs">
+        <item>Inicio</item>
+        <item>Buscar</item>
+        <item>Perfil</item>
+    </string-array>
     <string-array name="options_array" />
 </resources>

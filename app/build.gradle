@@ -1,16 +1,17 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    // id 'org.jetbrains.kotlin.android' // ← sólo si tienes código Kotlin
 }
 
 android {
     namespace 'com.fernan2529'
-    compileSdkVersion 35
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.fernan2529"
-        minSdkVersion 23
-        targetSdkVersion 35
+        minSdk 23
+        targetSdk 35
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -25,16 +26,17 @@ android {
 
     buildFeatures {
         viewBinding true
-        buildConfig true // ← reemplaza la propiedad obsoleta de gradle.properties
+        buildConfig true // ← esto reemplaza la propiedad obsoleta del gradle.properties
     }
 
+    // AGP 8+ recomienda Java 17
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-    // Si usas Kotlin, descomenta:
+    // Si usas Kotlin:
     // kotlinOptions {
-    //     jvmTarget = '1.8'
+    //     jvmTarget = '17'
     // }
 }
 
@@ -50,8 +52,8 @@ dependencies {
     // Firebase (BOM para alinear versiones)
     implementation platform('com.google.firebase:firebase-bom:31.3.0')
     implementation 'com.google.firebase:firebase-firestore-ktx'
-    implementation 'com.google.firebase:firebase-storage-ktx:20.1.0'
-    implementation 'com.google.firebase:firebase-messaging-ktx:23.1.2'
+    implementation 'com.google.firebase:firebase-storage-ktx'   // ← sin versión; la pone el BOM
+    implementation 'com.google.firebase:firebase-messaging-ktx' // ← sin versión
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.firebaseui:firebase-ui-firestore:8.0.2'
 
@@ -63,9 +65,6 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.0'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.19.0'
 
-    // Quitar soporte legacy (conflicta con AndroidX):
-    // implementation 'com.android.support:support-annotations:28.0.0'
-
     // Tests
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
@@ -73,9 +72,12 @@ dependencies {
 
     // Otros
     implementation 'com.hbb20:ccp:2.5.0'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
-    implementation 'com.github.dhaval2404:imagepicker:2.1'
+
+    // Glide (evita duplicados)
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+
+    implementation 'com.github.dhaval2404:imagepicker:2.1'
 }
+
