@@ -1,0 +1,126 @@
+name: Android APK (CI/CD)
+
+on:
+  # Ejecuta manualmente desde la pestaña "Actions"
+  workflow_dispatch:
+    inputs:
+      buildType:
+        description: "Tipo de build (debug/release)"
+        default: "release"
+        required: true
+  # Publica Release automáticamente cuando haces un tag como v1.0.0
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # necesario para crear/adjuntar assets a la Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # Ruta del módulo (ajusta si tu app no está en 'app')
+      MODULE_PATH: app
+      # Cambia a 'assembleDebug' si quieres debug
+      GRADLE_TASK_DEBUG: assembleDebug
+      GRADLE_TASK_RELEASE: assembleRelease
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle (cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # === (OPCIONAL) FIRMA DE RELEASE ===
+      # Si quieres firmar tu APK de release, crea estos secretos en tu repo:
+      # SIGNING_KEYSTORE_B64  -> tu keystore en base64
+      # SIGNING_STORE_PASSWORD
+      # SIGNING_KEY_ALIAS
+      # SIGNING_KEY_PASSWORD
+      # Si NO tienes firma, puedes borrar este paso y el de "Write gradle.properties"
+      - name: Decode keystore (only for release)
+        if: ${{ github.event_name == 'push' || inputs.buildType == 'release' }}
+        run: |
+          if [ -n "${{ secrets.SIGNING_KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.SIGNING_KEYSTORE_B64 }}" | base64 -d > $GITHUB_WORKSPACE/keystore.jks
+          fi
+
+      - name: Write gradle.properties with signing (only for release)
+        if: ${{ github.event_name == 'push' || inputs.buildType == 'release' }}
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/keystore.jks" ]; then
+            mkdir -p ~/.gradle
+            {
+              echo "MYAPP_UPLOAD_STORE_FILE=$GITHUB_WORKSPACE/keystore.jks"
+              echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.SIGNING_STORE_PASSWORD }}"
+              echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.SIGNING_KEY_ALIAS }}"
+              echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.SIGNING_KEY_PASSWORD }}"
+            } >> ~/.gradle/gradle.properties
+          fi
+
+      - name: Select Gradle task
+        id: task
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            t="${{ inputs.buildType }}"
+          else
+            # Si es push de tag, asumimos release
+            t="release"
+          fi
+          if [ "$t" = "debug" ]; then
+            echo "value=${GRADLE_TASK_DEBUG}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${GRADLE_TASK_RELEASE}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build
+        run: ./gradlew ${{ steps.task.outputs.value }} --stacktrace
+
+      - name: Locate APK(s)
+        id: find_apk
+        run: |
+          RELEASE_APKS=$(ls -1 $MODULE_PATH/build/outputs/apk/release/*.apk 2>/dev/null || true)
+          DEBUG_APKS=$(ls -1 $MODULE_PATH/build/outputs/apk/debug/*.apk 2>/dev/null || true)
+          echo "release=$RELEASE_APKS" >> $GITHUB_OUTPUT
+          echo "debug=$DEBUG_APKS" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact (release)
+        if: ${{ steps.task.outputs.value == 'assembleRelease' && steps.find_apk.outputs.release != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: ${{ steps.find_apk.outputs.release }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload artifact (debug)
+        if: ${{ steps.task.outputs.value == 'assembleDebug' && steps.find_apk.outputs.debug != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: ${{ steps.find_apk.outputs.debug }}
+          if-no-files-found: error
+          retention-days: 14
+
+      # === Publicar en GitHub Releases si el workflow corre por tag ===
+      - name: Create GitHub Release and upload APK(s)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.find_apk.outputs.release }}
+            ${{ steps.find_apk.outputs.debug }}
+          draft: false
+          prerelease: false
