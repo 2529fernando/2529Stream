@@ -1,0 +1,485 @@
+package com.fernan2529.Anime;
+
+import android.Manifest;
+import android.app.DownloadManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.fernan2529.R;
+import com.fernan2529.WatchViewActivities.WatchActivityViewGeneral; // 👈 Importa tu reproductor
+
+import java.util.Random;
+
+public class anime2 extends AppCompatActivity {
+
+    private static final int PERMISSION_REQUEST_CODE = 1001;
+
+    private Spinner spinnerVideos;
+    private Spinner spinnerDescargas;
+    private ArrayAdapter<String> adapter;
+    private final Random random = new Random();
+
+    private boolean ignoreFirstVideoSelect = true;
+    private boolean ignoreFirstDownloadSelect = true;
+
+    // Lista unificada
+    private final String[] names = {
+            "Seleccione el Capitulo",
+            "001 - De China llega un extraño",
+            "002 - La escuela no es un parque de diversiones",
+            "003 - Y de pronto surgió el amor",
+            "004 - ¿Ranma y Ranma ¡Vaya confusión!",
+            "005 - Akane y su amor salvaje",
+            "006 - Akane y su amor imposible",
+            "007 - Ryoga siempre está perdido",
+            "008 - La escuela es un campo de batalla. Ranma contra Ryoga",
+            "009 - Akane y Ryoga cambian de apariencia",
+            "010 - P-chan. ¡Eres un pícaro!",
+            "011 - La capitana del equipo de gimnasia se enamora de Ranma",
+            "012 - Un duelo de amor",
+            "013 - Competencia deportiva sin reglas",
+            "014 - Se roban a P-Chan",
+            "015 - El baile del espitiru de la muerte",
+            "016 - P-Chan al rescate",
+            "017 - La mejor esposa para el doctor tofu",
+            "018 - Aparece la poderosa shampoo salvese quien pueda",
+            "019 - La venganza de Shampoo",
+            "020 - Amo a Ranma y no lo dejare",
+            "021 - Soy un hombre, Ranma quiere volver a China",
+            "022 - Una competencia muy accidentada",
+            "023 - En verdad no te gustan los gatos",
+            "024 - La abuela de shampoo",
+            "025 - El legendario truco de las castañas",
+            "026 - Mousse el hombre con el truco del cisne",
+            "027 - La bola fenix",
+            "028 - El terrible entrenamiento en la montaña",
+            "029 - La venganza de ryoga",
+            "030 - Un reto para dos","031 - Secuestran a Akane",
+            "032 - Ranma contra mousse perder para ganar",
+            "033 - Happosai el monstruo lujurioso",
+            "034 - Ataque al vestidor de mujeres",
+            "035 - La mansión del terror",
+            "036 - Adiós a la chica",
+            "037 - La rosa negra y sus galletas de amor",
+            "038 - Cuidado con el ladrón",
+            "039 - Quien besara a Akane",
+            "040 - Batalla en un baño público",
+            "041 - Alguien más en busca de Ranma",
+            "042 - Ryoga y Akane son novios",
+            "043 - Un estornudo de amor",
+            "044 - En busca del Happo Dai Karin",
+            "045 - Valla confusión",
+            "046 - La bruja de la ropa íntima",
+            "047 - Akane se transforma",
+            "048 - El vengador de Yusenko",
+            "049 - Ranma se volvió mujer",
+            "050 - Happosai contra el hombre invencible",
+            "051 - La miserable familia de Kuno",
+            "052 - El fantasma y la espada encantada",
+            "053 - La pastilla del amor",
+            "054 - La decisión de Ryoga",
+            "055 - Recordando a Happosai",
+            "056 - Kodachi y su gran amor",
+            "057 - ¿Los últimos días de Happosai?",
+            "058 - Rin-Rin, Ran-Ran, ¡Vaya chicas!",
+            "059 - El espíritu diabólico viene por Ranma",
+            "060 - El truco del camaleón",
+            "061 - Un cambio en el cuerpo de Ryoga",
+            "062 - La gran carrera de obstáculos",
+            "063 - ¿Por qué se arreglará así Ukyo?",
+            "064 - Ranma vuelve al fin a las fosas encantadas",
+            "065 - El regreso del director",
+            "066 - La Gran fortaleza de Kuno",
+            "067 - Ranma pierde su fuerza",
+            "068 - Ranma adivina el último movimiento",
+            "069 - Ranma se recupera",
+            "070 - La madre de Ranma está aquí",
+            "071 - Ryoga recuerda su amor y su dolor",
+            "072 - La prometida del gato",
+            "073 - Solo se es joven una vez",
+            "074 - El discípulo",
+            "075 - ¡Sal al aire libre!",
+            "076 - Ryoga es huésped de la familia Tendo",
+            "077 - Happosai se enamora",
+            "078 - Profecía de amor",
+            "079 - El hombre más fuerte del mundo",
+            "080 - El secreto de Ryoga",
+            "081 - Un lindo recuerdo",
+            "082 - ¿Ranma acepta salir con Kuno?",
+            "083 - El hilo mágico de Shampoo",
+            "084 - Mousse regresa a casa",
+            "085 - La peor apuesta del mundo",
+            "086 - ¿Kuno se convierte en Marianne?",
+            "087 - Detesto a Ranma",
+            "088 - RinRin y RanRan contraatacan",
+            "089 - Los Bigotes de Dragón",
+            "090 - Cuando termina la ambición del hombre",
+            "091 - Ryoga declara su amor",
+            "092 - Genma se va de casa",
+            "093 - La famosa ceremonia del té",
+            "094 - ¿Una niña es la retadora?",
+            "095 - La competencia en el manantial",
+            "096 - ¿Ése es el padre de Kuno?",
+            "097 - La superior de la casa se pone de pie",
+            "098 - La maldición del leotardo",
+            "099 - Peligro en el baño público",
+            "100 - La venganza de la rana",
+            "101 -¡Contraataque! El pan de la ira",
+            "102 -¿Ranma es un Don Juan?",
+            "103 -El combate shogi",
+            "104 -Sasuke el espía",
+            "105 -¡Bonjour! Concurso al estilo francés",
+            "106 -El combate decisivo",
+            "107 -Las temibles lecciones de natación de Akane",
+            "108 -Ryoga va en busca del amor",
+            "109 -Bienvenidos a mis sueños",
+            "110 -¿Ranma es prometido de Nabiki?",
+            "111 -El misterio de las albóndigas de pulpo",
+            "112 -Ranma contra su sombra",
+            "113 -Kodachi busca papá",
+            "114 -Un nuevo oponente: Beto Fetiches",
+            "115 -Ranma y su mala caligrafía",
+            "116 -Aparece el otro Director",
+            "117 -Todos quieren volver a ser normales",
+            "118 -Ryoga ocupa el lugar de Ranma",
+            "119 -La familia Tendo se va al parque de diversiones",
+            "120 -Ranma el bromista",
+            "121 -El día de la sandía",
+            "122 -El demonio del estanque encantado (Parte 1)",
+            "123 -El demonio del estanque encantado (Parte 2)",
+            "124 -Doble ceremonia",
+            "125 -Una Navidad sin Ranma",
+            "126 -Cuento invernal",
+            "127 -Akane está en el hospital",
+            "128 -La maldición del panda pintado",
+            "129 -La leyenda del panda",
+            "130 -El misterio del pulpo",
+            "131 -Salsa de amor",
+            "132 -Vivan los falsos esposos",
+            "133 -El misterio de la montaña Kokuri",
+            "134 -Gosunkugi y sus muñecas",
+            "135 -No puedo olvidar a Akane",
+            "136 -No puedo apartarme de ti",
+            "137 -¿Kuno es el director suplente?",
+            "138 -Ranma en la oscuridad",
+            "139 -El guía de Jusenkyo está aquí",
+            "140 -Happosai y sus demonios",
+            "141 -Un nuevo truco",
+            "142 -La técnica depende del humor",
+            "143 -Shampoo besa cuando la atacan",
+            "144 -Por favor, fúgate conmigo",
+            "145 -Vamos al templo de los hongos",
+            "146 -La cuna del Infierno",
+            "147 -¿Picolette es un vampiro?",
+            "148 -La princesa Ori",
+            "149 -Una tarta de amor",
+            "150 -La nueva arma de Happosai",
+            "151 -La guerra de los Kuno",
+            "152 -Encuentro en la torre",
+            "153 -Gosunkugi y su aventura de verano",
+            "154 -Señorita Playa",
+            "155 -La guerra de animadoras parte 1",
+            "156 -La guerra de animadoras parte 2",
+            "157 -Explosión",
+            "158 -Blanquinegro",
+            "159 -La leyenda del dragón",
+            "160 -Ranma conoce a su mamá",
+            "161 -Quizá, algún día..."
+    };
+
+    private final String[] urls = {
+            "",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20001%20-%20De%20China%20llega%20un%20extra%C3%B1o..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20002%20-%20La%20escuela%20no%20es%20un%20parque%20de%20diversiones..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20003%20-%20Y%20de%20pronto%20surgi%C3%B3%20el%20amor..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20004%20-%20%C2%BFRanma%20y%20Ranma%20%C2%A1Vaya%20confusi%C3%B3n%21.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20005%20-%20Akane%20y%20su%20amor%20salvaje..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20006%20-%20Akane%20y%20su%20amor%20imposible..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20007%20-%20Ryoga%20siempre%20est%C3%A1%20perdido..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20008%20-%20La%20escuela%20es%20un%20campo%20de%20batalla.%20Ranma%20contra%20Ryoga..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20009%20-%20Akane%20y%20Ryoga%20cambian%20de%20apariencia..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20010%20-%20P-chan.%20%C2%A1Eres%20un%20p%C3%ADcaro%21.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20011%20-%20La%20capitana%20del%20equipo%20de%20gimnasia%20se%20enamora%20de%20Ranma..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20012%20-%20Un%20duelo%20de%20amor..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20013%20-%20Competencia%20deportiva%20sin%20reglas..mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20014%20-%20Se%20roban%20a%20P-Chan.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20015%20-%20El%20baile%20del%20espitiru%20de%20la%20muerte.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20016%20-%20P-Chan%20al%20rescate.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20017%20-%20La%20mejor%20esposa%20para%20el%20doctor%20tofu.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20018%20-%20%20Aparece%20la%20poderosa%20shampoo%20salvese%20quien%20pueda.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20019%20-%20La%20venganza%20de%20Shampoo.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20020%20-%20Amo%20a%20Ranma%20y%20no%20lo%20dejare.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20021%20-%20Soy%20un%20hombre%2C%20Ranma%20quiere%20volver%20a%20China.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20022%20-%20Una%20competencia%20muy%20accidentada.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20023%20-%20En%20verdad%20no%20te%20gustan%20los%20gatos.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20024%20-%20La%20abuela%20de%20shampoo.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20025%20-%20El%20legendario%20truco%20de%20las%20casta%C3%B1as.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20026%20-%20Mousse%20el%20hombre%20con%20el%20truco%20del%20cisne.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20027%20-%20La%20bola%20fenix.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20028%20-%20%20El%20terrible%20entrenamiento%20en%20la%20monta%C3%B1a.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20029%20-%20La%20venganza%20de%20ryoga.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20030%20-%20Un%20reto%20para%20dos.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20031%20-%20Secuestran%20a%20Akane.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20032%20-%20%20Ranma%20contra%20mousse%20perder%20para%20ganar.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20033%20-%20happosai%20el%20moustro%20lujurioso.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20034%20-%20Ataque%20al%20vestidor%20de%20mujeres.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20035%20-%20%20La%20mansi%C3%B3n%20del%20terror.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20036%20-%20Adi%C3%B3s%20a%20la%20chica.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20037%20-%20La%20rosa%20negra%20y%20sus%20galletas%20de%20amor.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20038%20-%20Cuidado%20con%20el%20ladron.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20039%20-%20Quien%20besara%20a%20Akane.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20040%20-%20Batalla%20en%20un%20ba%C3%B1o%20publico.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20041%20-%20Alguien%20mas%20en%20busca%20de%20Ranma.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20042%20-%20Ryoga%20y%20Akane%20son%20novio.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20043%20-%20Un%20estornudo%20de%20amor.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20044%20-%20En%20busca%20del%20happo%20Dai%20Karin.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20045%20-%20Valla%20confusi%C3%B3n.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20046%20-%20La%20bruja%20de%20la%20ropa%20intima.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20047%20-%20Akane%20se%20transforma.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20048%20-%20El%20vengador%20de%20Yusenko.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20049%20-%20Ranma%20se%20volvio%20mujer.mp4",
+            "https://archive.org/download/ranma-12-1-50/Ranma%20%C2%BD%20050%20-%20Happosai%20contra%20el%20hombre%20invicible.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20051%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20052%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20053%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20054%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20055%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20056%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20057%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20058%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20059%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20060%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20061%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20062%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20063%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20064%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20065%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20066%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20067%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20068%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20069%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20070%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20071%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20072%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20073%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20074%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20075%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20076%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20077%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20078%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20079%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20080%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20081%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20082%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20083%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20084%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20085%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20086%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20087%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20088%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20089%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20090%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20091%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20092%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20093%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20094%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20095%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20096%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20097%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20098%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20099%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20100%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20101%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20102%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20103%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20104%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20105%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20106%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20107%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20108%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20109%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20110%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20111%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20112%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20113%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20114%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20115%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20116%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20117%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20118%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20119%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20120%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20121%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20122%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20123%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20124%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20125%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20126%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20127%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20128%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20129%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20130%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20131%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20132%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20133%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20134%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20135%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20136%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20137%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20138%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20139%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20140%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20141%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20142%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20143%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20144%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20145%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20146%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20147%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20148%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20149%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20150%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20151%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20152%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20153%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20154%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20155%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20156%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20157%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20158%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20159%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20160%20-%20Espa%C3%B1ol%20Latino.mp4",
+            "https://archive.org/download/ranma-nibunnoichi-espanol-latino-y-japones/Ranma%C2%BD%20%20-%20Episodio%20161%20-%20Espa%C3%B1ol%20Latino.mp4"
+    };
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_anime2);
+
+        spinnerVideos = findViewById(R.id.spinner_videos);
+        spinnerDescargas = findViewById(R.id.spinner_downloads);
+        Button playRandomButton = findViewById(R.id.aleatorio);
+
+        // Un solo adapter para ambos spinners
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerVideos.setAdapter(adapter);
+        spinnerDescargas.setAdapter(adapter);
+
+        // Listener: ver video
+        spinnerVideos.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (ignoreFirstVideoSelect) { ignoreFirstVideoSelect = false; return; }
+                if (position == 0) return;
+                openWatchActivity(urls[position], names[position]); // 👉 WatchActivityViewGeneral
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
+
+        // Listener: descargar
+        spinnerDescargas.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                if (ignoreFirstDownloadSelect) { ignoreFirstDownloadSelect = false; return; }
+                if (position == 0) return;
+
+                String url = urls[position];
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q || hasWritePermission()) {
+                    downloadFile(url);
+                } else {
+                    requestWritePermission();
+                }
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
+
+        // Botón aleatorio
+        playRandomButton.setOnClickListener(v -> {
+            if (urls.length <= 1) {
+                Toast.makeText(this, "No hay capítulos disponibles.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            int index = 1 + random.nextInt(urls.length - 1); // 1..N
+            openWatchActivity(urls[index], names[index]);    // 👉 WatchActivityViewGeneral
+        });
+    }
+
+    /** Abre el reproductor WatchActivityViewGeneral con URL y título del capítulo */
+    private void openWatchActivity(String videoUrl, String title) {
+        Intent intent = WatchActivityViewGeneral.newIntent(anime2.this, videoUrl, title);
+        startActivity(intent);
+    }
+
+    // ===== Descargas =====
+
+    private boolean hasWritePermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestWritePermission() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                PERMISSION_REQUEST_CODE
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            Toast.makeText(
+                    this,
+                    granted ? "Permiso concedido. Vuelve a seleccionar para descargar."
+                            : "Permiso denegado. No se puede descargar en este dispositivo.",
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    private void downloadFile(String downloadUrl) {
+        String fileName = guessFileName(downloadUrl);
+
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl))
+                .setTitle(fileName)
+                .setDescription("Descargando " + fileName)
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+
+        DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        if (dm != null) {
+            dm.enqueue(request);
+            Toast.makeText(this, "Descargando " + fileName, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "DownloadManager no disponible", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String guessFileName(String url) {
+        try {
+            String raw = Uri.parse(url).getLastPathSegment();
+            if (raw == null || raw.trim().isEmpty()) return "video.mp4";
+            String decoded = java.net.URLDecoder.decode(raw, "UTF-8");
+            if (!decoded.contains(".")) decoded += ".mp4";
+            return decoded;
+        } catch (Exception e) {
+            return "video.mp4";
+        }
+    }
+}

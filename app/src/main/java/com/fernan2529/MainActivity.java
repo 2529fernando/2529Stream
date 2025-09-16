@@ -1,212 +1,251 @@
 package com.fernan2529;
 
 import android.Manifest;
-import android.content.ComponentName;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.IBinder;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.lifecycle.ViewModelProvider;
+
+import android.util.Pair;
+import android.util.SparseArray;
+import android.widget.Toast;
+
+import com.fernan2529.Doramas.doramas3;
+import com.fernan2529.Series.series6;
+import com.fernan2529.WebViewActivities.WebViewActivityGeneral;
+import com.fernan2529.WatchViewActivities.WatchActivityViewGeneral;
+import com.fernan2529.data.CategoriesRepository;
+import com.fernan2529.nav.CategoryNavigator;
+import com.fernan2529.vm.MainViewModel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int PERMISSION_REQUEST_CODE = 1001;
+    // --- Spinner en Main ---
+    private Spinner spinner;
+    private String[] categories = new String[0];
+    private boolean userTouched = false; // distinguir restauración vs. toque real
 
-    private boolean isResetting = false;  // evita re-entrada al resetear el spinner
-    private boolean isBound = false;
+    // Anti doble click simple
+    private long lastClickAt = 0L;
+    private boolean canClick() {
+        long now = System.currentTimeMillis();
+        if (now - lastClickAt < 300) return false;
+        lastClickAt = now;
+        return true;
+    }
 
-    private AudioService audioService;
+    // Permisos (Activity Result API)
+    private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {});
 
-    private final ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override public void onServiceConnected(ComponentName className, IBinder service) {
-            AudioService.LocalBinder binder = (AudioService.LocalBinder) service;
-            audioService = binder.getService();
-            // Solo mostrar notificación si tienes permiso (API 33+ requiere POST_NOTIFICATIONS)
-            if (Build.VERSION.SDK_INT < 33 ||
-                    ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.POST_NOTIFICATIONS)
-                            == PackageManager.PERMISSION_GRANTED) {
-                audioService.showNotification();
-            }
-            isBound = true;
-        }
-        @Override public void onServiceDisconnected(ComponentName arg0) {
-            audioService = null;
-            isBound = false;
-        }
-    };
+    private MainViewModel vm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        vm = new ViewModelProvider(this).get(MainViewModel.class);
+        // ❌ No restauramos selección previa para forzar siempre el placeholder.
+        // vm.loadSavedSelection(this);
+
+        setupSpinnerInMain();        // spinner interactivo (usa CategoryNavigator)
+        resetSpinnerToPlaceholder(); // fuerza "Seleccione la Categoria" al abrir
+
         checkAndRequestPermissions();
-        configureOnClickListeners();
-        configureSpinner();
-        // startAudioService();  // opcional: inicia/enciende el servicio al abrir la app
+        setupHeaderAndGridButtons();
+        setupWebButtons();
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        // Desenlaza si está enlazado para evitar fugas
-        if (isBound) {
-            unbindService(serviceConnection);
-            isBound = false;
-        }
+    protected void onResume() {
+        super.onResume();
+        // También al volver al frente, para que siempre quede en el placeholder
+        resetSpinnerToPlaceholder();
     }
 
-    /** ==== Permisos según versión de Android ==== */
-    private void checkAndRequestPermissions() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            // Android 13+: permisos granulares de medios + notificaciones
-            String[] needed = new String[] {
-                    Manifest.permission.READ_MEDIA_AUDIO,
-                    Manifest.permission.READ_MEDIA_VIDEO,
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.POST_NOTIFICATIONS
-            };
-            requestIfNeeded(needed);
+    /* =================== Helper para resetear Spinner =================== */
+    private void resetSpinnerToPlaceholder() {
+        if (spinner == null) return;
+        userTouched = false;                 // para que no dispare navegación
+        spinner.setSelection(0, false);      // coloca "Seleccione la Categoria"
+        vm.saveSelection(this, 0);           // opcional: persiste el placeholder
+    }
+
+    /* =================== Spinner en Main =================== */
+    private void setupSpinnerInMain() {
+        // ✅ usar el id unificado
+        spinner = findViewById(R.id.spinner_activities);
+        if (spinner == null) return;
+
+        // Datos
+        CategoriesRepository repo = new CategoriesRepository();
+        String[] loaded = repo.getCategories();
+        if (loaded != null && loaded.length > 0) {
+            categories = loaded;
         } else {
-            // Android 12-
-            String[] needed = new String[] {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-            };
-            requestIfNeeded(needed);
+            // fallback mínimo para evitar crash si hubiera un problema de datos
+            categories = new String[] {"Seleccione la Categoria"};
         }
-    }
 
-    private void requestIfNeeded(String[] permissions) {
-        java.util.ArrayList<String> toRequest = new java.util.ArrayList<>();
-        for (String p : permissions) {
-            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
-                toRequest.add(p);
-            }
-        }
-        if (!toRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this, toRequest.toArray(new String[0]), PERMISSION_REQUEST_CODE);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        // Aquí puedes actuar si faltó algo crítico; por ahora no es obligatorio
-    }
-
-    /** ==== Click listeners ==== */
-    private void configureOnClickListeners() {
-        // Cabecera
-        findViewById(R.id.donaciones).setOnClickListener(v -> startNewActivity(donaciones.class));
-        findViewById(R.id.btn_juegos).setOnClickListener(v -> startNewActivity(JuegosActivity.class));
-        findViewById(R.id.potifyy).setOnClickListener(v -> startNewActivity(musicactivity.class));
-        findViewById(R.id.btnchat).setOnClickListener(v -> startNewActivity(SplashActivity.class));
-
-        // Fila 1
-        findViewById(R.id.btn_navegador).setOnClickListener(v -> startNewActivity(Navegation.class));
-        findViewById(R.id.btn_descargas).setOnClickListener(v -> startNewActivity(DownloadlinkActivity.class));
-        findViewById(R.id.descarg).setOnClickListener(v -> startNewActivity(desactivity.class));
-
-        // Fila 2
-        findViewById(R.id.btn_reproductor).setOnClickListener(v -> startNewActivity(Reproductor.class));
-        findViewById(R.id.btnaudio).setOnClickListener(v -> startNewActivity(nubeactivity.class));
-        findViewById(R.id.btn_ver).setOnClickListener(v -> startNewActivity(version.class));
-
-        // Posters
-        findViewById(R.id.prop).setOnClickListener(v -> startNewActivity(propu.class));
-        findViewById(R.id.avatar).setOnClickListener(v -> startNewActivity(series6.class));
-        findViewById(R.id.cnn).setOnClickListener(v -> startNewActivity(WatchActivitytwo.class));
-        findViewById(R.id.espn).setOnClickListener(v -> openWebView("https://tvlibreonline.org/en-vivo/espn/"));
-        findViewById(R.id.spidey).setOnClickListener(v -> openWebView("https://kllamrd.org/video/tt10872600/"));
-        findViewById(R.id.sony).setOnClickListener(v -> openWebView("https://www.cablevisionhd.com/canal-sony-en-vivo.html"));
-        // Nota: R.id.boing se eliminó porque no existe en el XML actual.
-    }
-
-    private void startNewActivity(Class<?> activityClass) {
-        startActivity(new Intent(MainActivity.this, activityClass));
-    }
-
-    private void openWebView(String url) {
-        Intent intent = new Intent(MainActivity.this, WebViewActivity4.class);
-        intent.putExtra("VIDEO_URL", url);
-        startActivity(intent);
-    }
-
-    /** ==== Servicio de audio (opcional) ==== */
-    private void startAudioService() {
-        Intent intent = new Intent(MainActivity.this, AudioService.class);
-        startService(intent);
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
-
-        // Si NO quieres abrir una web al iniciar el servicio, comenta las 2 líneas siguientes.
-        Intent intent2 = new Intent(MainActivity.this, WebActivity.class);
-        startActivity(intent2);
-    }
-
-    /** ==== Spinner ==== */
-    private void configureSpinner() {
-        Spinner spinner = findViewById(R.id.spinner_activities);
-
-        String[] activityNames = {
-                "Seleccione la Categoria",
-                "Entretenimiento", "Peliculas", "Series", "Anime",
-                "Doramas", "Novelas", "Deportes", "Infantiles",
-                "Comedia", "Historia", "Hogar", "Musica", "Noticias"
-        };
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, activityNames
-        );
+        // Adapter
+        ArrayAdapter<String> adapter =
+                new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
 
+        // Marca interacción real del usuario
+        spinner.setOnTouchListener((v, e) -> {
+            if (e.getAction() == MotionEvent.ACTION_DOWN || e.getAction() == MotionEvent.ACTION_UP) {
+                userTouched = true;
+            }
+            return false; // deja que el spinner funcione normal
+        });
+
+        // Maneja selección: guarda en VM y navega con CategoryNavigator
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (isResetting) return;
-                if (position != 0) {
-                    startActivityBasedOnSelection(position);
-                    // Reset a la opción 0 sin re-entrar
-                    isResetting = true;
-                    spinner.post(() -> {
-                        spinner.setSelection(0, false);
-                        isResetting = false;
-                    });
+                if (!userTouched) return;   // ignora setSelection(0) programático
+                userTouched = false;
+
+                // Guarda la selección
+                vm.saveSelection(MainActivity.this, position);
+
+                // No navegar con placeholder (índice 0) o si fuera out-of-bounds
+                if (position <= 0 || position >= categories.length) return;
+
+                if (canClick()) {
+                    Intent intent = CategoryNavigator.buildIntent(MainActivity.this, position);
+                    if (intent != null) {
+                        startActivity(intent);
+                        // Vuelve a placeholder para próximas selecciones
+                        spinner.post(() -> {
+                            userTouched = false;
+                            spinner.setSelection(0, false);
+                            vm.saveSelection(MainActivity.this, 0);
+                        });
+                    } else {
+                        Toast.makeText(MainActivity.this, "No se pudo abrir la categoría.", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+            @Override public void onNothingSelected(AdapterView<?> parent) { /* no-op */ }
         });
     }
 
-    private void startActivityBasedOnSelection(int position) {
-        Class<?> targetActivity;
-        switch (position) {
-            case 1:  targetActivity = MainActivity2.class;  break;
-            case 2:  targetActivity = MainActivity3.class;  break;
-            case 3:  targetActivity = MainActivity4.class;  break;
-            case 4:  targetActivity = MainActivity13.class; break;
-            case 5:  targetActivity = MainActivity14.class; break;
-            case 6:  targetActivity = MainActivity5.class;  break;
-            case 7:  targetActivity = MainActivity6.class;  break;
-            case 8:  targetActivity = MainActivity7.class;  break;
-            case 9:  targetActivity = MainActivity8.class;  break;
-            case 10: targetActivity = MainActivity9.class;  break;
-            case 11: targetActivity = MainActivity10.class; break;
-            case 12: targetActivity = MainActivity11.class; break;
-            case 13: targetActivity = MainActivity12.class; break;
-            default: return;
+    /* =================== Permisos =================== */
+    private void checkAndRequestPermissions() {
+        List<String> toRequest = new ArrayList<>();
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            addIfNotGranted(toRequest, Manifest.permission.READ_MEDIA_AUDIO);
+            addIfNotGranted(toRequest, Manifest.permission.READ_MEDIA_VIDEO);
+            addIfNotGranted(toRequest, Manifest.permission.READ_MEDIA_IMAGES);
+            if (!areNotificationsEnabled(this)) {
+                addIfNotGranted(toRequest, Manifest.permission.POST_NOTIFICATIONS);
+            }
+        } else {
+            addIfNotGranted(toRequest, Manifest.permission.READ_EXTERNAL_STORAGE);
         }
-        startActivity(new Intent(MainActivity.this, targetActivity));
+
+        if (!toRequest.isEmpty()) {
+            requestPermissionsLauncher.launch(toRequest.toArray(new String[0]));
+        }
+    }
+
+    private void addIfNotGranted(List<String> list, String permission) {
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            list.add(permission);
+        }
+    }
+
+    private boolean areNotificationsEnabled(@NonNull Context ctx) {
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        return nm != null && nm.areNotificationsEnabled();
+    }
+
+    /* =================== Botones a Activities =================== */
+    private void setupHeaderAndGridButtons() {
+        SparseArray<Class<?>> map = new SparseArray<>();
+        // Cabecera
+        map.put(R.id.donaciones,       donaciones.class);
+        map.put(R.id.btn_juegos,       JuegosActivity.class);
+        map.put(R.id.potifyy,          musicactivity.class);
+        map.put(R.id.btnchat,          SplashActivity.class);
+        // Fila 1
+        map.put(R.id.btn_navegador,    Navegation.class);
+        map.put(R.id.btn_descargas,    DownloadlinkActivity.class);
+        map.put(R.id.descarg,          DescargasActivity.class);
+        // Fila 2
+        map.put(R.id.btn_reproductor,  Reproductor.class);
+        map.put(R.id.btnaudio,         nubeactivity.class);
+        map.put(R.id.btn_ver,          version.class);
+        // Posters
+        map.put(R.id.prop,             doramas3.class);
+        map.put(R.id.avatar,           series6.class);
+
+        for (int i = 0; i < map.size(); i++) {
+            final int viewId = map.keyAt(i);
+            final Class<?> dest = map.valueAt(i);
+            View v = findViewById(viewId);
+            if (v == null || dest == null) continue;
+            v.setOnClickListener(_v -> {
+                if (!canClick()) return;
+                startActivity(new Intent(MainActivity.this, dest));
+            });
+        }
+
+        // CNN a WatchActivityViewGeneral
+        View cnnTile = findViewById(R.id.cnn);
+        if (cnnTile != null) {
+            cnnTile.setOnClickListener(v -> {
+                if (!canClick()) return;
+                String cnnUrl = "https://d3696l48vwq25d.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-0g2918mubifjw/index.m3u8";
+                Intent i = WatchActivityViewGeneral.newIntent(MainActivity.this, cnnUrl, "CNN en vivo");
+                startActivity(i);
+            });
+        }
+    }
+
+    /* =================== Botones Web =================== */
+    private void setupWebButtons() {
+        SparseArray<Pair<String, Class<?>>> web = new SparseArray<>();
+        web.put(R.id.espn,   Pair.create("https://tvlibreonline.org/en-vivo/espn/", WebViewActivityGeneral.class));
+        web.put(R.id.spidey, Pair.create("https://kllamrd.org/video/tt10872600/",   WebViewActivityGeneral.class));
+        web.put(R.id.sony,   Pair.create("https://www.cablevisionhd.com/canal-sony-en-vivo.html", WebViewActivityGeneral.class));
+
+        for (int i = 0; i < web.size(); i++) {
+            final int viewId = web.keyAt(i);
+            final Pair<String, Class<?>> dest = web.valueAt(i);
+            View v = findViewById(viewId);
+            if (v == null || dest == null || dest.first == null || dest.second == null) continue;
+            v.setOnClickListener(_v -> {
+                if (!canClick()) return;
+                openWebView(dest.first, dest.second);
+            });
+        }
+    }
+
+    private void openWebView(String url, Class<?> webViewActivity) {
+        Intent intent = new Intent(MainActivity.this, webViewActivity);
+        intent.putExtra("url", url);
+        startActivity(intent);
     }
 }

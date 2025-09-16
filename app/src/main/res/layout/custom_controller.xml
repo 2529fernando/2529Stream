@@ -3,102 +3,210 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80000000"
-    >
+    android:background="#66000000">
+
+    <!-- ====== FILA SUPERIOR: IZQ (repeat) | CENTRO (título) | DER (rot-lock + lock) ====== -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="8dp"
+        android:gravity="center_vertical">
+
+        <!-- Columna izquierda (repeat) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical">
+
+            <ImageView
+                android:id="@+id/bt_repeat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_repeat"
+                android:contentDescription="Repetir" />
+        </LinearLayout>
+
+        <!-- Columna centro (título) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/video_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Título del video"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:shadowColor="#000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="3.5"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:clickable="false"
+                android:focusable="false"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <!-- Columna derecha (bloqueo rotacional + candado) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical">
+
+            <ImageView
+                android:id="@+id/bt_rotation_lock"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_screen_rotation"
+                android:contentDescription="Bloqueo rotacional" />
+
+            <ImageView
+                android:id="@+id/exo_lock"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="8dp"
+                android:src="@mipmap/padlock"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Logo centrado (solo durante carga) -->
     <ImageView
-        android:id="@+id/exo_lock"
+        android:id="@+id/buffer_logo2"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_centerInParent="true"
+        android:src="@drawable/logoload"
+        android:visibility="gone" />
+
+    <!-- % debajo del logo (opcional) -->
+    <TextView
+        android:id="@+id/buffer_percent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:padding="10dp"
-        android:src="@mipmap/padlock"
-        android:layout_alignParentRight="true"
-        android:theme="@style/ClickableView" />
+        android:layout_below="@id/buffer_logo2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="6dp"
+        android:text="0%"
+        android:textColor="@android:color/white"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- Controles centro -->
     <LinearLayout
         android:id="@+id/sec_controlvid1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center"
         android:layout_centerInParent="true">
+
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:id="@+id/exo_rew"
-            android:src="@mipmap/replaypre"
-            android:layout_marginRight="50dp"
-            android:theme="@style/ClickableView"
-            />
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="40dp"
+            android:src="@mipmap/replaypre" />
+
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:id="@+id/exo_play"
-            android:src="@mipmap/play_icon"
-            android:theme="@style/ClickableView"
-            />
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@drawable/ic_play_red" />
+
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:id="@+id/exo_pause"
-            android:src="@mipmap/pause_icon"
-            android:theme="@style/ClickableView"
-            />
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@drawable/ic_pause_red" />
+
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:id="@+id/exo_ffwd"
-            android:src="@mipmap/forwardnext"
-            android:layout_marginLeft="50dp"
-            android:theme="@style/ClickableView"
-            />
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="40dp"
+            android:src="@mipmap/forwardnext" />
     </LinearLayout>
+
+    <!-- Barra inferior -->
     <LinearLayout
         android:id="@+id/sec_controlvid2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_alignParentBottom="true">
+        android:layout_alignParentBottom="true"
+        android:padding="8dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="8dp"
-            android:gravity="center">
+            android:gravity="center_vertical">
 
             <TextView
+                android:id="@+id/exo_position"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/exo_position"
-                android:textColor="@color/white"/>
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="/"
                 android:textColor="#CBCDC8"
-                android:layout_marginRight="4dp"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginHorizontal="6dp"
+                android:textSize="14sp" />
+
             <TextView
+                android:id="@+id/exo_duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:id="@+id/exo_duration"
-                android:textColor="#CBCDC8"/>
+                android:textColor="#CBCDC8"
+                android:textSize="14sp"
+                android:layout_weight="1" />
+
             <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@mipmap/maxicon"
+                android:id="@+id/bt_fullscreen_aspect"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginEnd="12dp"
+                android:padding="10dp"
+                android:src="@drawable/ic_aspect_ratio" />
+
+            <ImageView
                 android:id="@+id/bt_fullscreen"
-                android:theme="@style/ClickableView"
-                />
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:padding="10dp"
+                android:src="@mipmap/maxicon" />
         </LinearLayout>
+
         <com.google.android.exoplayer2.ui.DefaultTimeBar
+            android:id="@+id/exo_progress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/exo_progress"
-            android:layout_marginTop="-8dp"
+            android:layout_marginTop="-6dp"
             app:unplayed_color="#45424E"
             app:buffered_color="#95989F"
             app:played_color="#FF0000"
-            app:scrubber_color="#FF0000"
-            />
+            app:scrubber_color="#FF0000" />
     </LinearLayout>
+
 </RelativeLayout>

@@ -66,13 +66,14 @@
         android:max="100"
         android:progress="0"
         android:progressTint="#2196F3"
-        app:layout_constraintBottom_toTopOf="@id/web_view"
+        app:layout_constraintBottom_toTopOf="@id/web_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/divider_1" />
 
-    <WebView
-        android:id="@+id/web_view"
+    <!-- AHORA el contenedor donde se monta la WebView de la pestaña activa -->
+    <FrameLayout
+        android:id="@+id/web_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/web_back"
@@ -80,16 +81,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/progressBar" />
 
-    <FrameLayout
-        android:id="@+id/fullscreen_container"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
+    <!-- Botones inferiores (agregamos web_tabs entre refresh y share) -->
     <ImageView
         android:id="@+id/web_back"
         android:layout_width="wrap_content"
@@ -100,7 +92,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/web_forward"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/web_view" />
+        app:layout_constraintTop_toBottomOf="@+id/web_container" />
 
     <ImageView
         android:id="@+id/web_forward"
@@ -112,7 +104,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/web_refresh"
         app:layout_constraintStart_toEndOf="@id/web_back"
-        app:layout_constraintTop_toBottomOf="@+id/web_view" />
+        app:layout_constraintTop_toBottomOf="@+id/web_container" />
 
     <ImageView
         android:id="@+id/web_refresh"
@@ -122,9 +114,23 @@
         android:padding="10dp"
         android:src="@drawable/ic_baseline_refresh_24"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/web_share"
+        app:layout_constraintEnd_toStartOf="@+id/web_tabs"
         app:layout_constraintStart_toEndOf="@id/web_forward"
-        app:layout_constraintTop_toBottomOf="@+id/web_view" />
+        app:layout_constraintTop_toBottomOf="@+id/web_container" />
+
+    <!-- NUEVO: botón de pestañas -->
+    <ImageView
+        android:id="@+id/web_tabs"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="10dp"
+        android:src="@drawable/ic_tabs"
+        android:contentDescription="@string/tabs"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/web_share"
+        app:layout_constraintStart_toEndOf="@id/web_refresh"
+        app:layout_constraintTop_toBottomOf="@+id/web_container" />
 
     <ImageView
         android:id="@+id/web_share"
@@ -135,7 +141,19 @@
         android:src="@drawable/ic_baseline_share_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/web_refresh"
-        app:layout_constraintTop_toBottomOf="@+id/web_view" />
+        app:layout_constraintStart_toEndOf="@id/web_tabs"
+        app:layout_constraintTop_toBottomOf="@+id/web_container" />
+
+    <!-- Fullscreen por encima de todo -->
+    <FrameLayout
+        android:id="@+id/fullscreen_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:elevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
