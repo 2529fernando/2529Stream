@@ -1,14 +1,18 @@
 package com.fernan2529;
 
 import android.Manifest;
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
@@ -28,25 +32,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.Locale;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
-import okhttp3.ConnectionPool;
-import okhttp3.Headers;
-import okhttp3.OkHttpClient;
-import okhttp3.Protocol;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 public class version2 extends AppCompatActivity {
 
@@ -59,36 +46,41 @@ public class version2 extends AppCompatActivity {
     // Permisos (solo <= Android 9)
     private ActivityResultLauncher<String[]> legacyPermsLauncher;
 
+    // URL por defecto: Releases (recomendado). Puedes sobrescribir con putExtra(EXTRA_URL, "https://...").
     public static final String EXTRA_URL = "EXTRA_URL";
-    private String initialUrl = "https://2529sebastian.blogspot.com/2025/09/2529stream.html";
+    private String initialUrl = "https://github.com/2529fernando/2529Stream/tree/master/apk/debug";
 
-    // Downloader
-    private static final int MAX_PARTS = 8;
-    private static final int CONNECT_TIMEOUT = 15;
-    private static final int READ_TIMEOUT = 60;
-    private static final int WRITE_TIMEOUT = 60;
+    // ID de la descarga en curso (para instalar al completar)
+    private long currentDownloadId = -1L;
 
-    private OkHttpClient http;
-    private final ExecutorService bg = Executors.newCachedThreadPool();
+    // Receiver para saber cuándo acaba la descarga
+    private final android.content.BroadcastReceiver downloadReceiver = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
+            if (id == currentDownloadId && id != -1L) {
+                handleDownloadComplete(id);
+                currentDownloadId = -1L;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_version2);
+        setContentView(R.layout.activity_version); // puedes cambiarlo a activity_version2 si renombraste el layout
+
+        // Registrar receiver del DownloadManager (API 33+ requiere flag)
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(downloadReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, filter);
+        }
 
         String urlFromIntent = getIntent().getStringExtra(EXTRA_URL);
         if (urlFromIntent != null && !urlFromIntent.trim().isEmpty()) {
             initialUrl = urlFromIntent.trim();
         }
-
-        http = new OkHttpClient.Builder()
-                .protocols(java.util.Arrays.asList(Protocol.HTTP_2, Protocol.HTTP_1_1))
-                .connectionPool(new ConnectionPool(16, 5, TimeUnit.MINUTES))
-                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
-                .retryOnConnectionFailure(true)
-                .build();
 
         setupActivityResultLaunchers();
 
@@ -105,16 +97,18 @@ public class version2 extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        bg.shutdownNow();
+        try { unregisterReceiver(downloadReceiver); } catch (Exception ignored) {}
     }
 
     private void setupActivityResultLaunchers() {
+        // File chooser (subidas)
         fileChooserLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 new ActivityResultCallback<ActivityResult>() {
                     @Override
                     public void onActivityResult(ActivityResult result) {
                         if (filePathCallback == null) return;
+
                         Uri[] uris = null;
                         if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                             Intent data = result.getData();
@@ -134,9 +128,10 @@ public class version2 extends AppCompatActivity {
                 }
         );
 
+        // Permisos de almacenamiento (solo para APIs antiguas)
         legacyPermsLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestMultiplePermissions(),
-                result -> { /* sin UI */ }
+                result -> { /* informativo */ }
         );
     }
 
@@ -157,29 +152,49 @@ public class version2 extends AppCompatActivity {
         }
         CookieManager.getInstance().setAcceptCookie(true);
 
+        // Navegación interna + reescritura GitHub -> raw para APK
         wv.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                String scheme = uri.getScheme() != null ? uri.getScheme() : "";
-                if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
+                return handleUrlRouting(view, uri);
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                try {
+                    return handleUrlRouting(view, Uri.parse(url));
+                } catch (Exception e) {
                     return false;
-                } else {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (ActivityNotFoundException e) {
-                        Toast.makeText(version2.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
                 }
             }
         });
 
-        // Importante: solo disparamos una TAREA EN BACKGROUND
-        wv.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) ->
-                bg.execute(() -> handleFastApkDownload_BG(url, userAgent, contentDisposition, mimetype))
-        );
+        // Descargas (solo APK, guardar en /Download, instalar al terminar)
+        wv.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                // FIX: GitHub móvil a veces usa blob:... (no es válido para DownloadManager).
+                if (url != null && url.startsWith("blob:")) {
+                    // Intentamos reconstruir https a partir de la página actual (por ej. .../blob/master/apk/debug/app-debug.apk)
+                    String pageUrl = webView != null ? webView.getUrl() : null;
+                    if (pageUrl != null) {
+                        String httpsRaw = toRawIfGitHubApk(Uri.parse(pageUrl));
+                        if (httpsRaw != null && (httpsRaw.startsWith("http://") || httpsRaw.startsWith("https://"))) {
+                            handleDownloadApkOnly(httpsRaw, userAgent, contentDisposition, mimetype);
+                            return;
+                        }
+                    }
+                    Toast.makeText(version2.this, "No se pudo resolver la URL de descarga (blob). Abre el archivo y toca 'View raw' o usa Releases.", Toast.LENGTH_LONG).show();
+                    return;
+                }
 
+                // Si es http/https seguimos normal:
+                handleDownloadApkOnly(url, userAgent, contentDisposition, mimetype);
+            }
+        });
+
+        // Soporte para <input type="file">
         wv.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> filePath, FileChooserParams fileChooserParams) {
@@ -205,172 +220,178 @@ public class version2 extends AppCompatActivity {
         });
     }
 
-    // ================== BACKGROUND DOWNLOAD ==================
-
-    private void uiToast(String msg) {
-        runOnUiThread(() -> Toast.makeText(version2.this, msg, Toast.LENGTH_LONG).show());
+    /** Maneja el enrutamiento de URLs dentro del WebView y reescribe GitHub blob->raw para APKs. */
+    private boolean handleUrlRouting(@NonNull WebView view, @NonNull Uri uri) {
+        String scheme = uri.getScheme() != null ? uri.getScheme() : "";
+        if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
+            // Reescritura para GitHub -> raw si corresponde
+            String rewritten = toRawIfGitHubApk(uri);
+            if (!rewritten.equals(uri.toString())) {
+                view.loadUrl(rewritten);
+                return true; // ya manejado
+            }
+            return false; // manejar en el WebView
+        } else {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(version2.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        }
     }
 
-    private void handleFastApkDownload_BG(String url, String userAgent, String contentDisposition, String mimeTypeIn) {
+    /** Convierte enlaces GitHub "blob" a "raw" cuando el destino es un APK (o fuerza raw=1). */
+    private String toRawIfGitHubApk(@NonNull Uri uri) {
         try {
-            // Validación APK
-            String guessed = URLUtil.guessFileName(url, contentDisposition, mimeTypeIn);
-            if (guessed == null || guessed.trim().isEmpty()) guessed = "app-" + System.currentTimeMillis() + ".apk";
-            String filename = ensureApkExtension(guessed);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.US);
+            String path = uri.getPath() == null ? "" : uri.getPath();
+            String query = uri.getQuery();
 
-            String lowerUrl = url == null ? "" : url.toLowerCase(Locale.US);
-            String lowerCd  = contentDisposition == null ? "" : contentDisposition.toLowerCase(Locale.US);
-            String lowerMime = mimeTypeIn == null ? "" : mimeTypeIn.toLowerCase(Locale.US);
-
-            boolean looksLikeApk =
-                    filename.toLowerCase(Locale.US).endsWith(".apk") ||
-                            lowerUrl.contains(".apk") ||
-                            lowerCd.contains(".apk") ||
-                            "application/vnd.android.package-archive".equals(lowerMime) ||
-                            "application/octet-stream".equals(lowerMime);
-
-            if (!looksLikeApk) {
-                uiToast("Solo se permiten descargas .apk");
-                return;
-            }
-
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                        != PackageManager.PERMISSION_GRANTED) {
-                    legacyPermsLauncher.launch(new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE });
-                    uiToast("Otorga permisos y vuelve a intentar la descarga.");
-                    return;
+            // Caso 1: host github.com con /blob/ y termina en .apk  -> raw.githubusercontent.com
+            if (host.equals("github.com") && path.contains("/blob/") && path.toLowerCase(Locale.US).endsWith(".apk")) {
+                String[] parts = path.split("/blob/", 2);
+                if (parts.length == 2) {
+                    String left = parts[0];   // /owner/repo
+                    String right = parts[1];  // branch/ruta/app.apk
+                    return "https://raw.githubusercontent.com" + left + "/" + right;
                 }
             }
 
-            File base = getExternalFilesDir(null);
-            if (base == null) {
-                uiToast("No hay almacenamiento disponible.");
-                return;
-            }
-            File outApk = new File(base, filename);
-
-            // Cabeceras comunes
-            okhttp3.Headers.Builder hb = new okhttp3.Headers.Builder();
-            String cookies = CookieManager.getInstance().getCookie(url);
-            if (cookies != null) hb.add("Cookie", cookies);
-            if (userAgent != null) hb.add("User-Agent", userAgent);
-            okhttp3.Headers commonHeaders = hb.build();
-
-            // HEAD
-            Request headReq = new Request.Builder().url(url).headers(commonHeaders).head().build();
-            try (Response head = http.newCall(headReq).execute()) {
-                long length = parseContentLength(head);
-                boolean supportsRanges = "bytes".equalsIgnoreCase(head.header("Accept-Ranges"))
-                        || hasContentRange(head);
-
-                if (length > 0 && supportsRanges) {
-                    turboDownloadWithRanges(url, commonHeaders, length, outApk);
-                    uiToast("Descarga completada (multiconexión)");
-                } else {
-                    singleStreamDownload(url, commonHeaders, outApk);
-                    uiToast("Descarga completada");
+            // Caso 2: host github.com con /blob/ (por si no termina en .apk). Añade ?raw=1
+            if (host.equals("github.com") && path.contains("/blob/")) {
+                Uri.Builder b = uri.buildUpon();
+                if (query == null || !query.contains("raw=")) {
+                    b.appendQueryParameter("raw", "1");
                 }
+                return b.build().toString();
             }
-
-            if (maybeRequestUnknownSources()) {
-                uiToast("Habilita 'Instalar apps de esta fuente' y vuelve a intentar.");
-                return;
-            }
-            installApk(outApk);
-
-        } catch (Exception e) {
-            uiToast("Error en descarga: " + e.getMessage());
-        }
-    }
-
-    private void singleStreamDownload(String url, okhttp3.Headers headers, File outFile) throws IOException {
-        Request req = new Request.Builder().url(url).headers(headers).get().build();
-        try (Response resp = http.newCall(req).execute()) {
-            if (!resp.isSuccessful()) throw new IOException("HTTP " + resp.code());
-            ResponseBody body = resp.body();
-            if (body == null) throw new IOException("Cuerpo vacío");
-            if (outFile.exists()) outFile.delete();
-            try (RandomAccessFile raf = new RandomAccessFile(outFile, "rw")) {
-                byte[] buf = new byte[512 * 1024];
-                int n;
-                while ((n = body.byteStream().read(buf)) != -1) {
-                    raf.write(buf, 0, n);
-                }
-            }
-        }
-    }
-
-    private void turboDownloadWithRanges(String url, okhttp3.Headers headers, long length, File outFile) throws IOException {
-        int cores = Math.max(2, Runtime.getRuntime().availableProcessors());
-        int parts = Math.min(MAX_PARTS, cores * 2);
-
-        if (outFile.exists()) outFile.delete();
-        try (RandomAccessFile raf = new RandomAccessFile(outFile, "rw")) {
-            raf.setLength(length);
-        }
-
-        long partSize = Math.max(1, length / parts);
-        ExecutorService pool = Executors.newFixedThreadPool(parts);
-        CountDownLatch latch = new CountDownLatch(parts);
-        long startPos = 0;
-        for (int i = 0; i < parts; i++) {
-            final long start = startPos;
-            final long end = (i == parts - 1) ? (length - 1) : (start + partSize - 1);
-            startPos = end + 1;
-
-            pool.execute(() -> {
-                try {
-                    okhttp3.Headers h = headers.newBuilder()
-                            .add("Range", "bytes=" + start + "-" + end)
-                            .build();
-                    Request partReq = new Request.Builder().url(url).headers(h).get().build();
-                    try (Response partResp = http.newCall(partReq).execute()) {
-                        if (partResp.code() != 206 && partResp.code() != 200) {
-                            throw new IOException("HTTP " + partResp.code());
-                        }
-                        ResponseBody body = partResp.body();
-                        if (body == null) throw new IOException("Cuerpo vacío");
-                        try (RandomAccessFile raf = new RandomAccessFile(outFile, "rw")) {
-                            raf.seek(start);
-                            byte[] buf = new byte[512 * 1024];
-                            int n;
-                            while ((n = body.byteStream().read(buf)) != -1) {
-                                raf.write(buf, 0, n);
-                            }
-                        }
-                    }
-                } catch (Exception ignore) {
-                    pool.shutdownNow();
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        try {
-            boolean ok = latch.await(15, TimeUnit.MINUTES);
-            pool.shutdownNow();
-            if (!ok) throw new IOException("Tiempo de descarga agotado");
-        } catch (InterruptedException e) {
-            pool.shutdownNow();
-            throw new IOException("Descarga interrumpida");
-        }
-    }
-
-    private long parseContentLength(Response head) {
-        try {
-            String cl = head.header("Content-Length");
-            if (cl != null) return Long.parseLong(cl);
         } catch (Exception ignored) {}
-        return -1;
+        return uri.toString();
     }
 
-    private boolean hasContentRange(Response head) {
-        String cr = head.header("Content-Range");
-        return cr != null && cr.toLowerCase(Locale.US).startsWith("bytes");
+    /**
+     * Descarga solo APK y los guarda en la carpeta pública "Download".
+     * Al terminar, se instala automáticamente (con intervención del usuario).
+     */
+    private void handleDownloadApkOnly(String url, String userAgent, String contentDisposition, String mimeTypeIn) {
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
+            Toast.makeText(this, "URL inválida para descarga.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Nombre sugerido
+        String guessedName = URLUtil.guessFileName(url, contentDisposition, mimeTypeIn);
+        if (guessedName == null || guessedName.trim().isEmpty()) {
+            guessedName = "app_" + System.currentTimeMillis() + ".apk";
+        }
+        String filename = ensureApkExtension(guessedName);
+
+        // Heurística: validar que "parece" un APK
+        String lowerUrl = url.toLowerCase(Locale.US);
+        String lowerCd  = contentDisposition == null ? "" : contentDisposition.toLowerCase(Locale.US);
+        String lowerMime = mimeTypeIn == null ? "" : mimeTypeIn.toLowerCase(Locale.US);
+
+        boolean looksLikeApk =
+                filename.toLowerCase(Locale.US).endsWith(".apk") ||
+                        lowerUrl.contains(".apk") ||
+                        lowerCd.contains(".apk") ||
+                        "application/vnd.android.package-archive".equals(lowerMime) ||
+                        "application/octet-stream".equals(lowerMime);
+
+        if (!looksLikeApk) {
+            Toast.makeText(this, "Solo se permiten descargas .apk", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Permisos para <= Android 9 (P)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                legacyPermsLauncher.launch(new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE });
+                Toast.makeText(this, "Otorga permisos y vuelve a intentar la descarga.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        try {
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+
+            // Cookies y UA (útil si requiere sesión)
+            String cookies = CookieManager.getInstance().getCookie(url);
+            if (cookies != null) request.addRequestHeader("Cookie", cookies);
+            if (userAgent != null) request.addRequestHeader("User-Agent", userAgent);
+
+            // Forzar MIME de APK
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setTitle(filename);
+            request.setDescription("Descargando APK…");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.allowScanningByMediaScanner();
+
+            // SIEMPRE: carpeta pública "Download"
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
+
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            if (dm != null) {
+                currentDownloadId = dm.enqueue(request);
+                Toast.makeText(this, "Descarga iniciada en /Download", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "No se pudo acceder al DownloadManager.", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "No se pudo iniciar la descarga: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
+    private void handleDownloadComplete(long downloadId) {
+        try {
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (dm == null) return;
+
+            DownloadManager.Query q = new DownloadManager.Query().setFilterById(downloadId);
+            Cursor c = dm.query(q);
+            if (c != null) {
+                if (c.moveToFirst()) {
+                    int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        Uri apkUri = dm.getUriForDownloadedFile(downloadId); // content://
+                        if (apkUri != null) {
+                            if (maybeRequestUnknownSources()) {
+                                Toast.makeText(this,
+                                        "Habilita 'Instalar apps de esta fuente' y vuelve a intentar.",
+                                        Toast.LENGTH_LONG).show();
+                                c.close();
+                                return;
+                            }
+                            startInstall(apkUri);
+                        } else {
+                            Toast.makeText(this, "No se pudo obtener el archivo descargado.", Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        Toast.makeText(this, "Descarga fallida.", Toast.LENGTH_LONG).show();
+                    }
+                }
+                c.close();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Error al preparar instalación: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void startInstall(@NonNull Uri apkUri) {
+        Intent install = new Intent(Intent.ACTION_VIEW);
+        install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(install);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "No se encontró instalador de paquetes.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Android 8.0+ requiere que el usuario permita "Instalar apps de esta fuente". */
     private boolean maybeRequestUnknownSources() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             boolean allowed = getPackageManager().canRequestPackageInstalls();
@@ -385,27 +406,13 @@ public class version2 extends AppCompatActivity {
         return false;
     }
 
-    private void installApk(@NonNull File apkFile) {
-        try {
-            Uri contentUri = FileProvider.getUriForFile(
-                    this, getPackageName() + ".fileprovider", apkFile);
-            Intent install = new Intent(Intent.ACTION_VIEW);
-            install.setDataAndType(contentUri, "application/vnd.android.package-archive");
-            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(install);
-        } catch (ActivityNotFoundException e) {
-            uiToast("No se encontró instalador de paquetes.");
-        } catch (Exception e) {
-            uiToast("Error al iniciar instalación: " + e.getMessage());
-        }
-    }
-
     private String ensureApkExtension(String name) {
         String trimmed = name == null ? "" : name.trim();
         if (!trimmed.toLowerCase(Locale.US).endsWith(".apk")) {
             int dot = trimmed.lastIndexOf('.');
-            if (dot > 0) trimmed = trimmed.substring(0, dot);
+            if (dot > 0) {
+                trimmed = trimmed.substring(0, dot);
+            }
             trimmed = trimmed + ".apk";
         }
         return trimmed;

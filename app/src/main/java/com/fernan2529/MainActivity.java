@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity {
         // Fila 2
         map.put(R.id.btn_reproductor,  Reproductor.class);
         map.put(R.id.btnaudio,         nubeactivity.class);
-        map.put(R.id.btn_ver,          version2.class);
+        map.put(R.id.btn_ver,          version.class);
         // Posters
         map.put(R.id.prop,             doramas3.class);
         map.put(R.id.avatar,           series6.class);
