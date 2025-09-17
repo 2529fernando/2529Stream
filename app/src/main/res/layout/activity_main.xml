@@ -36,6 +36,24 @@
                 android:scaleType="fitCenter"
                 android:contentDescription="@string/app_name"
                 android:src="@mipmap/titu" />
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="wrap_content"
+                android:layout_height="56dp"
+                android:layout_gravity="start|top"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:contentDescription="@string/app_name"
+                android:src="@mipmap/ic__stream_launcher" />
+            <ImageView
+                android:id="@+id/donaciones"
+                android:layout_width="72dp"
+                android:layout_height="40dp"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="20dp"
+                android:layout_marginBottom="60dp"
+                android:contentDescription="@string/app_name"
+                android:src="@mipmap/paypa" />
 
 
 
