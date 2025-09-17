@@ -9,4 +9,13 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <com.fernan2529.ui.LoadingOverlayView
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_x="0dp"
+        android:layout_y="0dp"
+        android:clickable="false"
+        android:visibility="visible" />
+
 </FrameLayout>

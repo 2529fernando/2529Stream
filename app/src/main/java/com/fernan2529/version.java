@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,11 +33,16 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.fernan2529.ui.LoadingOverlayView; // <-- Igual que en tu otro Activity
+
 import java.util.Locale;
 
 public class version extends AppCompatActivity {
 
     private WebView webView;
+
+    // Overlay de carga
+    private LoadingOverlayView loadingOverlay;
 
     // <input type="file">
     private ValueCallback<Uri[]> filePathCallback;
@@ -68,6 +74,10 @@ public class version extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_version);
+
+        // Overlay de carga (si existe en el layout)
+        loadingOverlay = findViewById(R.id.loadingOverlay);
+        if (loadingOverlay != null) loadingOverlay.showNow();
 
         // Registrar receiver del DownloadManager
         registerReceiver(downloadReceiver, new android.content.IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
@@ -147,7 +157,7 @@ public class version extends AppCompatActivity {
         }
         CookieManager.getInstance().setAcceptCookie(true);
 
-        // Navegación interna
+        // Navegación interna + loading al inicio/fin
         wv.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -164,6 +174,20 @@ public class version extends AppCompatActivity {
                     return true;
                 }
             }
+
+            // ⬇️ Aquí mostramos el overlay al iniciar carga
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                showLoadingOnPageStart();
+                super.onPageStarted(view, url, favicon);
+            }
+
+            // ⬇️ Y lo ocultamos cuando termina
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (loadingOverlay != null) loadingOverlay.fadeOut();
+                super.onPageFinished(view, url);
+            }
         });
 
         // Descargas (solo APK, guardar en /Download, instalar al terminar)
@@ -174,7 +198,7 @@ public class version extends AppCompatActivity {
             }
         });
 
-        // Soporte para <input type="file">
+        // Soporte para <input type="file"> y progreso de carga
         wv.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> filePath, FileChooserParams fileChooserParams) {
@@ -197,7 +221,26 @@ public class version extends AppCompatActivity {
                 }
                 return true;
             }
+
+            // ⬇️ Actualizamos barra/overlay con el progreso real
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                if (loadingOverlay != null) {
+                    float p = Math.max(0, Math.min(100, newProgress)) / 100f;
+                    loadingOverlay.setProgress(p);
+                    if (p >= 1f) loadingOverlay.fadeOut();
+                }
+                super.onProgressChanged(view, newProgress);
+            }
         });
+    }
+
+    // ---- Método helper reutilizable (igual patrón que en tu otro Activity)
+    private void showLoadingOnPageStart() {
+        if (loadingOverlay != null) {
+            loadingOverlay.setProgress(0f);
+            loadingOverlay.showNow();
+        }
     }
 
     /**
@@ -269,8 +312,6 @@ public class version extends AppCompatActivity {
         }
     }
 
-
-
     private void startInstall(@NonNull Uri apkUri) {
         Intent install = new Intent(Intent.ACTION_VIEW);
         install.setDataAndType(apkUri, "application/vnd.android.package-archive");
@@ -282,6 +323,7 @@ public class version extends AppCompatActivity {
             Toast.makeText(this, "No se encontró instalador de paquetes.", Toast.LENGTH_LONG).show();
         }
     }
+
     private void handleDownloadComplete(long downloadId) {
         try {
             DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
@@ -293,9 +335,8 @@ public class version extends AppCompatActivity {
                 if (c.moveToFirst()) {
                     int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        // ✅ En lugar de instalar, solo mostramos el aviso solicitado
                         Toast.makeText(this,
-                                "No te olvides de desinstalar la version actual para instalar la nueva :)",
+                                "No te olvides de desinstalar la versión actual para instalar la nueva :)",
                                 Toast.LENGTH_LONG).show();
                     } else {
                         Toast.makeText(this, "Descarga fallida.", Toast.LENGTH_LONG).show();
@@ -307,8 +348,6 @@ public class version extends AppCompatActivity {
             Toast.makeText(this, "Error tras la descarga: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
-
-
 
     private String ensureApkExtension(String name) {
         String trimmed = name == null ? "" : name.trim();

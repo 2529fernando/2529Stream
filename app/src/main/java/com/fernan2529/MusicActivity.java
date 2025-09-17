@@ -35,6 +35,8 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
+import com.fernan2529.ui.LoadingOverlayView; // ⬅️ Overlay de carga
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -81,6 +83,9 @@ public class MusicActivity extends AppCompatActivity {
     private Uri allowedOrigin;
     private final Map<String, Long> recentKeys = new LinkedHashMap<>();
 
+    // Overlay de carga
+    private LoadingOverlayView loadingOverlay;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,6 +94,10 @@ public class MusicActivity extends AppCompatActivity {
         allowedOrigin = Uri.parse(ALLOWED_URL);
         requestLegacyWritePermissionIfNeeded();
         ensureDownloadChannel(); // <- canal de notificaciones
+
+        // ⬇️ Inicializa y muestra el overlay de carga
+        loadingOverlay = findViewById(R.id.loadingOverlay);
+        if (loadingOverlay != null) loadingOverlay.showNow();
 
         webView = findViewById(R.id.webview);
 
@@ -125,6 +134,9 @@ public class MusicActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                // ⬇️ Mostrar overlay al iniciar una carga
+                showLoadingOnPageStart();
+
                 String lower = url == null ? "" : url.toLowerCase(Locale.US);
                 for (String domain : AD_DOMAINS) {
                     if (lower.contains(domain)) {
@@ -179,6 +191,9 @@ public class MusicActivity extends AppCompatActivity {
                         + "},true);}catch(e){}})();";
                 view.evaluateJavascript(blobHook, null);
 
+                // ⬇️ Ocultar overlay al terminar
+                if (loadingOverlay != null) loadingOverlay.fadeOut();
+
                 super.onPageFinished(view, url);
             }
         });
@@ -187,6 +202,17 @@ public class MusicActivity extends AppCompatActivity {
             @Override public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) { return false; }
             @Override public boolean onJsBeforeUnload(WebView view, String url, String message, android.webkit.JsResult result) { if (result!=null) result.cancel(); return true; }
             @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> c, FileChooserParams p) { Toast.makeText(MusicActivity.this,"Acción no permitida",Toast.LENGTH_SHORT).show(); return true; }
+
+            // ⬇️ Progreso de carga para el overlay
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                if (loadingOverlay != null) {
+                    float p = Math.max(0, Math.min(100, newProgress)) / 100f;
+                    loadingOverlay.setProgress(p);
+                    if (p >= 1f) loadingOverlay.fadeOut();
+                }
+                super.onProgressChanged(view, newProgress);
+            }
         });
 
         webView.setDownloadListener(new DownloadListener() {
@@ -199,6 +225,14 @@ public class MusicActivity extends AppCompatActivity {
         });
 
         webView.loadUrl(ALLOWED_URL);
+    }
+
+    // === Helper overlay ===
+    private void showLoadingOnPageStart() {
+        if (loadingOverlay != null) {
+            loadingOverlay.setProgress(0f);
+            loadingOverlay.showNow();
+        }
     }
 
     // === Notificaciones ===
