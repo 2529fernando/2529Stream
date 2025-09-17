@@ -27,8 +27,11 @@
         android:roundIcon="@mipmap/ic__stream_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ExoPlayerJava"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         tools:targetApi="29">
+        <activity
+            android:name=".version2"
+            android:exported="false" />
         <activity
             android:name=".cabiosgit"
             android:exported="false" />

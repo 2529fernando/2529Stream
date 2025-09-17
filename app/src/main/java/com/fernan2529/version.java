@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -45,9 +46,9 @@ public class version extends AppCompatActivity {
     // Permisos (solo <= Android 9)
     private ActivityResultLauncher<String[]> legacyPermsLauncher;
 
-    // URL por defecto (puedes sobreescribirla con putExtra(EXTRA_URL, "https://..."))
+    // URL por defecto: Releases (recomendado). Puedes sobrescribir con putExtra(EXTRA_URL, "https://...").
     public static final String EXTRA_URL = "EXTRA_URL";
-    private String initialUrl = "https://google.com";
+    private String initialUrl = "https://github.com/2529fernando/2529Stream/tree/master/apk/debug";
 
     // ID de la descarga en curso (para instalar al completar)
     private long currentDownloadId = -1L;
@@ -58,7 +59,6 @@ public class version extends AppCompatActivity {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
             if (id == currentDownloadId && id != -1L) {
                 handleDownloadComplete(id);
-                // Evitar instalaciones repetidas
                 currentDownloadId = -1L;
             }
         }
@@ -69,8 +69,13 @@ public class version extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_version);
 
-        // Registrar receiver del DownloadManager
-        registerReceiver(downloadReceiver, new android.content.IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        // Registrar receiver del DownloadManager (API 33+ requiere flag)
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(downloadReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, filter);
+        }
 
         String urlFromIntent = getIntent().getStringExtra(EXTRA_URL);
         if (urlFromIntent != null && !urlFromIntent.trim().isEmpty()) {
@@ -147,21 +152,20 @@ public class version extends AppCompatActivity {
         }
         CookieManager.getInstance().setAcceptCookie(true);
 
-        // Navegación interna
+        // Navegación interna + reescritura GitHub -> raw para APK
         wv.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                String scheme = uri.getScheme() != null ? uri.getScheme() : "";
-                if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
-                    return false; // manejar en el WebView
-                } else {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (ActivityNotFoundException e) {
-                        Toast.makeText(version.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
+                return handleUrlRouting(view, uri);
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                try {
+                    return handleUrlRouting(view, Uri.parse(url));
+                } catch (Exception e) {
+                    return false;
                 }
             }
         });
@@ -170,6 +174,22 @@ public class version extends AppCompatActivity {
         wv.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                // FIX: GitHub móvil a veces usa blob:... (no es válido para DownloadManager).
+                if (url != null && url.startsWith("blob:")) {
+                    // Intentamos reconstruir https a partir de la página actual (por ej. .../blob/master/apk/debug/app-debug.apk)
+                    String pageUrl = webView != null ? webView.getUrl() : null;
+                    if (pageUrl != null) {
+                        String httpsRaw = toRawIfGitHubApk(Uri.parse(pageUrl));
+                        if (httpsRaw != null && (httpsRaw.startsWith("http://") || httpsRaw.startsWith("https://"))) {
+                            handleDownloadApkOnly(httpsRaw, userAgent, contentDisposition, mimetype);
+                            return;
+                        }
+                    }
+                    Toast.makeText(version.this, "No se pudo resolver la URL de descarga (blob). Abre el archivo y toca 'View raw' o usa Releases.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+
+                // Si es http/https seguimos normal:
                 handleDownloadApkOnly(url, userAgent, contentDisposition, mimetype);
             }
         });
@@ -200,11 +220,66 @@ public class version extends AppCompatActivity {
         });
     }
 
+    /** Maneja el enrutamiento de URLs dentro del WebView y reescribe GitHub blob->raw para APKs. */
+    private boolean handleUrlRouting(@NonNull WebView view, @NonNull Uri uri) {
+        String scheme = uri.getScheme() != null ? uri.getScheme() : "";
+        if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
+            // Reescritura para GitHub -> raw si corresponde
+            String rewritten = toRawIfGitHubApk(uri);
+            if (!rewritten.equals(uri.toString())) {
+                view.loadUrl(rewritten);
+                return true; // ya manejado
+            }
+            return false; // manejar en el WebView
+        } else {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, uri));
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(version.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
+            }
+            return true;
+        }
+    }
+
+    /** Convierte enlaces GitHub "blob" a "raw" cuando el destino es un APK (o fuerza raw=1). */
+    private String toRawIfGitHubApk(@NonNull Uri uri) {
+        try {
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.US);
+            String path = uri.getPath() == null ? "" : uri.getPath();
+            String query = uri.getQuery();
+
+            // Caso 1: host github.com con /blob/ y termina en .apk  -> raw.githubusercontent.com
+            if (host.equals("github.com") && path.contains("/blob/") && path.toLowerCase(Locale.US).endsWith(".apk")) {
+                String[] parts = path.split("/blob/", 2);
+                if (parts.length == 2) {
+                    String left = parts[0];   // /owner/repo
+                    String right = parts[1];  // branch/ruta/app.apk
+                    return "https://raw.githubusercontent.com" + left + "/" + right;
+                }
+            }
+
+            // Caso 2: host github.com con /blob/ (por si no termina en .apk). Añade ?raw=1
+            if (host.equals("github.com") && path.contains("/blob/")) {
+                Uri.Builder b = uri.buildUpon();
+                if (query == null || !query.contains("raw=")) {
+                    b.appendQueryParameter("raw", "1");
+                }
+                return b.build().toString();
+            }
+        } catch (Exception ignored) {}
+        return uri.toString();
+    }
+
     /**
      * Descarga solo APK y los guarda en la carpeta pública "Download".
      * Al terminar, se instala automáticamente (con intervención del usuario).
      */
     private void handleDownloadApkOnly(String url, String userAgent, String contentDisposition, String mimeTypeIn) {
+        if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
+            Toast.makeText(this, "URL inválida para descarga.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         // Nombre sugerido
         String guessedName = URLUtil.guessFileName(url, contentDisposition, mimeTypeIn);
         if (guessedName == null || guessedName.trim().isEmpty()) {
@@ -213,7 +288,7 @@ public class version extends AppCompatActivity {
         String filename = ensureApkExtension(guessedName);
 
         // Heurística: validar que "parece" un APK
-        String lowerUrl = url == null ? "" : url.toLowerCase(Locale.US);
+        String lowerUrl = url.toLowerCase(Locale.US);
         String lowerCd  = contentDisposition == null ? "" : contentDisposition.toLowerCase(Locale.US);
         String lowerMime = mimeTypeIn == null ? "" : mimeTypeIn.toLowerCase(Locale.US);
 
@@ -280,7 +355,7 @@ public class version extends AppCompatActivity {
                 if (c.moveToFirst()) {
                     int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Uri apkUri = dm.getUriForDownloadedFile(downloadId); // content:// URI gestionado por DM
+                        Uri apkUri = dm.getUriForDownloadedFile(downloadId); // content://
                         if (apkUri != null) {
                             if (maybeRequestUnknownSources()) {
                                 Toast.makeText(this,
@@ -316,10 +391,7 @@ public class version extends AppCompatActivity {
         }
     }
 
-    /**
-     * Android 8.0+ requiere que el usuario permita "Instalar apps de esta fuente".
-     * Devuelve true si hay que llevar al usuario a Ajustes (aún no permitido).
-     */
+    /** Android 8.0+ requiere que el usuario permita "Instalar apps de esta fuente". */
     private boolean maybeRequestUnknownSources() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             boolean allowed = getPackageManager().canRequestPackageInstalls();
