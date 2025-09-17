@@ -47,7 +47,7 @@ public class version extends AppCompatActivity {
 
     // URL por defecto (puedes sobreescribirla con putExtra(EXTRA_URL, "https://..."))
     public static final String EXTRA_URL = "EXTRA_URL";
-    private String initialUrl = "https://drive.google.com/drive/folders/14OyC7xlEc9Hi7GmL5ngiCjkCuJgAVp-V?usp=drive_link";
+    private String initialUrl = "https://google.com";
 
     // ID de la descarga en curso (para instalar al completar)
     private long currentDownloadId = -1L;
