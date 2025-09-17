@@ -2,6 +2,8 @@ package com.fernan2529;
 
 import android.Manifest;
 import android.app.DownloadManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -29,6 +31,8 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.ByteArrayInputStream;
@@ -46,7 +50,12 @@ import java.util.Set;
 
 public class MusicActivity extends AppCompatActivity {
 
+    // === Config ===
     private static final String ALLOWED_URL = "https://flacdownloader.com/";
+    private static final String CHANNEL_ID = "downloads";
+    private static final CharSequence CHANNEL_NAME = "Descargas";
+    private static final int RC_WRITE = 1001;
+    private static final long DEDUP_WINDOW_MS = 8000L; // 8 s
 
     private static final List<String> AD_DOMAINS = Arrays.asList(
             "doubleclick.net","ads.google.com","googlesyndication.com","googletagservices.com",
@@ -67,13 +76,9 @@ public class MusicActivity extends AppCompatActivity {
             "jpg","jpeg","png","gif","webp","pdf","epub","zip","rar","7z","apk","xapk"
     ));
 
-    private static final int RC_WRITE = 1001;
-    private static final long DEDUP_WINDOW_MS = 8000L; // 8 segundos
-
+    // === Estado ===
     private WebView webView;
     private Uri allowedOrigin;
-
-    // De-dup de descargas por URL/nombre
     private final Map<String, Long> recentKeys = new LinkedHashMap<>();
 
     @Override
@@ -83,6 +88,7 @@ public class MusicActivity extends AppCompatActivity {
 
         allowedOrigin = Uri.parse(ALLOWED_URL);
         requestLegacyWritePermissionIfNeeded();
+        ensureDownloadChannel(); // <- canal de notificaciones
 
         webView = findViewById(R.id.webview);
 
@@ -143,7 +149,6 @@ public class MusicActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Bloquea window.open y fuerza navegación en la misma pestaña
                 String antiPopup = "(function(){try{"
                         + "window.open=function(){return null};"
                         + "document.addEventListener('click',function(e){"
@@ -153,7 +158,7 @@ public class MusicActivity extends AppCompatActivity {
                         + "},true);}catch(e){}})();";
                 view.evaluateJavascript(antiPopup, null);
 
-                // Hook para blobs con antirrebote en JS
+                // Antiduplicado en JS para blob:
                 String blobHook = "(function(){try{"
                         + "window.__androidDownloading=window.__androidDownloading||{};"
                         + "document.addEventListener('click',function(e){"
@@ -166,7 +171,7 @@ public class MusicActivity extends AppCompatActivity {
                         + "   var name=(a.getAttribute('download')||('file_'+Date.now()));"
                         + "   fetch(href).then(r=>r.blob()).then(function(b){"
                         + "     var rd=new FileReader(); rd.onloadend=function(){"
-                        + "       window.AndroidDownloader.saveBase64(rd.result,name);"
+                        + "       AndroidDownloader.saveBase64(rd.result,name);"
                         + "       setTimeout(function(){delete window.__androidDownloading[href]},8000);"
                         + "     }; rd.readAsDataURL(b);"
                         + "   }).catch(function(){delete window.__androidDownloading[href]});"
@@ -187,8 +192,8 @@ public class MusicActivity extends AppCompatActivity {
         webView.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
-                // De-dup por URL
                 if (!shouldStartOnce("URL:" + (url==null?"":url))) return;
+                // DownloadManager ya muestra su notificación
                 startDownload(url, userAgent, contentDisposition, mimeType);
             }
         });
@@ -196,12 +201,46 @@ public class MusicActivity extends AppCompatActivity {
         webView.loadUrl(ALLOWED_URL);
     }
 
-    // Manejo común de navegación + de-dup
+    // === Notificaciones ===
+    private void ensureDownloadChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW
+            );
+            ch.setDescription("Progreso y finalización de descargas");
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.createNotificationChannel(ch);
+        }
+    }
+
+    private int notifyStart(String fileName) {
+        int id = (int) (System.currentTimeMillis() & 0xFFFFFFF);
+        NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("Descargando…")
+                .setContentText(fileName)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW);
+        NotificationManagerCompat.from(this).notify(id, b.build());
+        return id;
+    }
+
+    private void notifyDone(int id, String fileName) {
+        NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle("Descarga completada")
+                .setContentText(fileName)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW);
+        NotificationManagerCompat.from(this).notify(id, b.build());
+    }
+
+    // Manejo común de navegación
     private boolean handleNavigation(WebView view, String newUrl) {
         if (newUrl == null || newUrl.isEmpty()) return true;
         String lower = newUrl.toLowerCase(Locale.US);
 
-        // Bloquear esquemas no deseados
         if (lower.startsWith("intent:")||lower.startsWith("market:")||lower.startsWith("mailto:")||
                 lower.startsWith("tel:")||lower.startsWith("sms:")||lower.startsWith("geo:")||
                 lower.startsWith("about:blank")) {
@@ -209,7 +248,6 @@ public class MusicActivity extends AppCompatActivity {
             return true;
         }
 
-        // blob: -> lo manejamos con JS; aquí solo antirrebote extra por si llega
         if (lower.startsWith("blob:")) {
             if (!shouldStartOnce("BLOB:" + newUrl)) return true;
             String js = "(function(){var u='"+jsEscape(newUrl)+"',n='file_'+Date.now();"
@@ -220,7 +258,6 @@ public class MusicActivity extends AppCompatActivity {
             return true;
         }
 
-        // Mismo origin
         if (isSameOrigin(newUrl)) {
             if (looksDownloadable(newUrl)) {
                 if (!shouldStartOnce("URL:" + newUrl)) return true;
@@ -234,19 +271,16 @@ public class MusicActivity extends AppCompatActivity {
         return true;
     }
 
-    // === DownloadManager ===
+    // === DownloadManager (muestra su propia notificación) ===
     private void startDownload(String url, @Nullable String userAgent,
                                @Nullable String contentDisposition, @Nullable String mimeType) {
-        String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
-        fileName = sanitizeFilename(fileName);
-
+        String fileName = sanitizeFilename(URLUtil.guessFileName(url, contentDisposition, mimeType));
         try {
             DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
             String cookies = CookieManager.getInstance().getCookie(url);
             if (cookies != null) req.addRequestHeader("Cookie", cookies);
             if (userAgent != null) req.addRequestHeader("User-Agent", userAgent);
 
-            // Forzamos MIME razonable si viene vacía/genérica y la extensión lo indica
             String ext = getExt(fileName);
             String fixedMime = strongMimeFromExt(ext);
             if (mimeType == null || mimeType.isEmpty() || "text/plain".equals(mimeType) || "application/octet-stream".equals(mimeType)) {
@@ -270,13 +304,15 @@ public class MusicActivity extends AppCompatActivity {
         }
     }
 
-    // === Guardado de blobs ===
-    private static class BlobSaver {
+    // === Guardado de blobs (dataURL -> bytes) con notificaciones propias ===
+    private class BlobSaver {
         private final Context ctx;
         BlobSaver(Context ctx){ this.ctx = ctx.getApplicationContext(); }
 
         @JavascriptInterface
         public void saveBase64(String dataUrl, String suggestedName) {
+            int noteId = -1;
+            String cleanNameForNote = "archivo";
             try {
                 String mime = "application/octet-stream";
                 int comma = dataUrl != null ? dataUrl.indexOf(',') : -1;
@@ -286,23 +322,22 @@ public class MusicActivity extends AppCompatActivity {
                     if (semi > 5 && semi < coma) mime = dataUrl.substring(5, semi);
                 }
 
+                String cleanName = sanitizeFilename(suggestedName);
+                String extFromName = getExt(cleanName);
                 String base64 = (comma > 0) ? dataUrl.substring(comma + 1) : (dataUrl == null ? "" : dataUrl);
                 byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
 
-                // --- Normalización de nombre/extensión ---
-                String cleanName = sanitizeFilename(suggestedName);
-                String extFromName = getExt(cleanName); // puede ser null
                 String extFromMime = guessExtensionFromMime(mime);
-
-                // Si el nombre ya trae una extensión conocida (mp3, flac, mp4, etc.), la respetamos SIEMPRE
                 if (extFromName == null || extFromName.isEmpty() || !AUDIO_VIDEO_IMG_EXTS.contains(extFromName)) {
-                    // Nombre sin extensión válida → usamos la del MIME si es útil
                     if (extFromMime != null && !"bin".equals(extFromMime)) {
                         cleanName = stripExt(cleanName) + "." + extFromMime;
                     }
                 }
+                cleanNameForNote = cleanName;
 
-                // Ajusta MIME si viene "text/plain" / genérico pero la extensión dice otra cosa
+                // Notificación de inicio (solo blobs; DownloadManager ya notifica sus URLs)
+                noteId = notifyStart(cleanName);
+
                 String finalExt = getExt(cleanName);
                 String strongMime = strongMimeFromExt(finalExt);
                 if (strongMime != null &&
@@ -342,78 +377,28 @@ public class MusicActivity extends AppCompatActivity {
 
             } catch (Exception e) {
                 Toast.makeText(ctx, "Error al guardar blob", Toast.LENGTH_SHORT).show();
+            } finally {
+                if (noteId != -1) notifyDone(noteId, cleanNameForNote);
             }
-        }
-
-        private static String guessExtensionFromMime(String mime) {
-            if (mime == null) return "bin";
-            String ext = null;
-            try { ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime); } catch (Exception ignored) {}
-            if (ext != null && !ext.isEmpty()) return ext.toLowerCase(Locale.US);
-            // Fallbacks útiles
-            if ("audio/flac".equals(mime)) return "flac";
-            if ("audio/mpeg".equals(mime)) return "mp3";
-            if ("audio/mp4".equals(mime)) return "m4a";
-            if ("application/pdf".equals(mime)) return "pdf";
-            if ("image/png".equals(mime)) return "png";
-            if ("image/jpeg".equals(mime)) return "jpg";
-            if ("video/mp4".equals(mime)) return "mp4";
-            return "bin";
-        }
-
-        private static String sanitizeFilename(String name) {
-            if (name == null || name.trim().isEmpty()) return "file_" + System.currentTimeMillis();
-            name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
-            name = name.replaceAll("\\s+", " ").trim();
-            if (name.length() > 100) name = name.substring(0, 100);
-            return name;
-        }
-
-        private static String getExt(String name) {
-            if (name == null) return null;
-            int dot = name.lastIndexOf('.');
-            if (dot <= 0 || dot == name.length()-1) return null;
-            return name.substring(dot+1).toLowerCase(Locale.US);
-        }
-
-        private static String stripExt(String name) {
-            if (name == null) return "";
-            int dot = name.lastIndexOf('.');
-            if (dot <= 0) return name;
-            return name.substring(0, dot);
-        }
-
-        private static String strongMimeFromExt(String ext) {
-            if (ext == null) return null;
-            Map<String,String> map = new HashMap<>();
-            map.put("mp3","audio/mpeg");
-            map.put("flac","audio/flac");
-            map.put("m4a","audio/mp4");
-            map.put("aac","audio/aac");
-            map.put("wav","audio/wav");
-            map.put("ogg","audio/ogg");
-            map.put("mp4","video/mp4");
-            map.put("webm","video/webm");
-            map.put("mkv","video/x-matroska");
-            map.put("avi","video/x-msvideo");
-            map.put("mov","video/quicktime");
-            map.put("jpg","image/jpeg");
-            map.put("jpeg","image/jpeg");
-            map.put("png","image/png");
-            map.put("gif","image/gif");
-            map.put("webp","image/webp");
-            map.put("pdf","application/pdf");
-            map.put("epub","application/epub+zip");
-            map.put("zip","application/zip");
-            map.put("rar","application/vnd.rar");
-            map.put("7z","application/x-7z-compressed");
-            map.put("apk","application/vnd.android.package-archive");
-            map.put("xapk","application/vnd.android.package-archive");
-            return map.get(ext);
         }
     }
 
-    // === util ext/mime (Activity) ===
+    // === util ext/mime ===
+    private static String guessExtensionFromMime(String mime) {
+        if (mime == null) return "bin";
+        String ext = null;
+        try { ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime); } catch (Exception ignored) {}
+        if (ext != null && !ext.isEmpty()) return ext.toLowerCase(Locale.US);
+        if ("audio/flac".equals(mime)) return "flac";
+        if ("audio/mpeg".equals(mime)) return "mp3";
+        if ("audio/mp4".equals(mime)) return "m4a";
+        if ("application/pdf".equals(mime)) return "pdf";
+        if ("image/png".equals(mime)) return "png";
+        if ("image/jpeg".equals(mime)) return "jpg";
+        if ("video/mp4".equals(mime)) return "mp4";
+        return "bin";
+    }
+
     private static String getExt(String name){
         if (name == null) return null;
         int dot = name.lastIndexOf('.');
@@ -427,13 +412,23 @@ public class MusicActivity extends AppCompatActivity {
         return name.substring(0, dot);
     }
     private static String strongMimeFromExt(String ext){
-        return BlobSaver.strongMimeFromExt(ext);
+        if (ext == null) return null;
+        Map<String,String> map = new HashMap<>();
+        map.put("mp3","audio/mpeg"); map.put("flac","audio/flac"); map.put("m4a","audio/mp4");
+        map.put("aac","audio/aac");  map.put("wav","audio/wav");   map.put("ogg","audio/ogg");
+        map.put("mp4","video/mp4");  map.put("webm","video/webm"); map.put("mkv","video/x-matroska");
+        map.put("avi","video/x-msvideo"); map.put("mov","video/quicktime");
+        map.put("jpg","image/jpeg"); map.put("jpeg","image/jpeg"); map.put("png","image/png");
+        map.put("gif","image/gif");  map.put("webp","image/webp");
+        map.put("pdf","application/pdf"); map.put("epub","application/epub+zip");
+        map.put("zip","application/zip"); map.put("rar","application/vnd.rar"); map.put("7z","application/x-7z-compressed");
+        map.put("apk","application/vnd.android.package-archive"); map.put("xapk","application/vnd.android.package-archive");
+        return map.get(ext);
     }
 
-    // De-dup por clave (URL:, BLOB:, NAME:)
+    // === de-dup y helpers ===
     private synchronized boolean shouldStartOnce(String key){
         long now = System.currentTimeMillis();
-        // limpia entradas viejas
         recentKeys.entrySet().removeIf(e -> now - e.getValue() > DEDUP_WINDOW_MS);
         Long last = recentKeys.get(key);
         if (last != null && now - last < DEDUP_WINDOW_MS) return false;
@@ -495,7 +490,6 @@ public class MusicActivity extends AppCompatActivity {
         }
     }
 
-    // Sanea nombres de DownloadManager
     private static String sanitizeFilename(String name) {
         if (name == null || name.trim().isEmpty()) return "file_" + System.currentTimeMillis();
         name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
