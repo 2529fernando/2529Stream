@@ -186,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupHeaderAndGridButtons() {
         SparseArray<Class<?>> map = new SparseArray<>();
         // Cabecera
-        map.put(R.id.donaciones,       Reproductor.class);
+        map.put(R.id.donaciones,       donaciones.class);
         map.put(R.id.btn_juegos,       JuegosActivity.class);
         map.put(R.id.potifyy,          MusicActivity.class);
         map.put(R.id.btnchat,          SplashActivity.class);
