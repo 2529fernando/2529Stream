@@ -2,11 +2,10 @@ package com.fernan2529;
 
 import android.Manifest;
 import android.app.DownloadManager;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -14,9 +13,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
 import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
 import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -28,8 +29,6 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.ByteArrayInputStream;
@@ -37,34 +36,23 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class MusicActivity extends AppCompatActivity {
 
-    public static int downloadCount = 0;
-
-    // URL única permitida para navegar (la página inicial)
     private static final String ALLOWED_URL = "https://flacdownloader.com/";
 
-    // Canal de notificaciones para blobs
-    private static final String BLOB_CHANNEL_ID = "blob_downloads";
-
-    // Dominios de anuncios a bloquear (simple)
     private static final List<String> AD_DOMAINS = Arrays.asList(
-            "doubleclick.net",
-            "ads.google.com",
-            "googlesyndication.com",
-            "googletagservices.com",
-            "adservice.google.com",
-            "facebook.net",
-            "adform.net",
-            "outbrain.com",
-            "taboola.com"
+            "doubleclick.net","ads.google.com","googlesyndication.com","googletagservices.com",
+            "adservice.google.com","facebook.net","adform.net","outbrain.com","taboola.com"
     );
 
-    // Extensiones típicas descargables
     private static final Set<String> DOWNLOAD_EXTS = new HashSet<>(Arrays.asList(
             "zip","rar","7z","tar","gz",
             "mp3","aac","flac","m4a","wav","ogg",
@@ -74,49 +62,52 @@ public class MusicActivity extends AppCompatActivity {
             "jpg","jpeg","png","gif","webp"
     ));
 
+    private static final Set<String> AUDIO_VIDEO_IMG_EXTS = new HashSet<>(Arrays.asList(
+            "mp3","flac","m4a","aac","wav","ogg","mp4","webm","mkv","avi","mov",
+            "jpg","jpeg","png","gif","webp","pdf","epub","zip","rar","7z","apk","xapk"
+    ));
+
     private static final int RC_WRITE = 1001;
+    private static final long DEDUP_WINDOW_MS = 8000L; // 8 segundos
 
     private WebView webView;
+    private Uri allowedOrigin;
+
+    // De-dup de descargas por URL/nombre
+    private final Map<String, Long> recentKeys = new LinkedHashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music);
 
-        // Crear canal para notificaciones de blobs (Android 8+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel ch = new NotificationChannel(
-                    BLOB_CHANNEL_ID,
-                    "Descargas (blob)",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            ch.setDescription("Notificaciones para descargas guardadas desde blobs");
-            NotificationManager nm = getSystemService(NotificationManager.class);
-            if (nm != null) nm.createNotificationChannel(ch);
-        }
-
-        // Permiso de escritura solo requerido en Android 9 o menor
+        allowedOrigin = Uri.parse(ALLOWED_URL);
         requestLegacyWritePermissionIfNeeded();
 
         webView = findViewById(R.id.webview);
 
-        // Configuración del WebView
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setSupportMultipleWindows(false);
         s.setJavaScriptCanOpenWindowsAutomatically(false);
+        s.setSupportZoom(false);
+        s.setMediaPlaybackRequiresUserGesture(true);
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) s.setSafeBrowsingEnabled(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
-        // Bridge para manejar blobs desde JS
         webView.addJavascriptInterface(new BlobSaver(this), "AndroidDownloader");
 
-        // Cliente: adblock + navegación limitada + inyección para capturar blob:
         webView.setWebViewClient(new WebViewClient() {
 
             @Nullable
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                String reqUrl = request.getUrl().toString().toLowerCase();
+                if (request == null || request.getUrl() == null) return super.shouldInterceptRequest(view, request);
+                String reqUrl = request.getUrl().toString().toLowerCase(Locale.US);
                 for (String domain : AD_DOMAINS) {
                     if (reqUrl.contains(domain)) {
                         return new WebResourceResponse("text/plain", "utf-8",
@@ -127,115 +118,142 @@ public class MusicActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                String lower = url == null ? "" : url.toLowerCase(Locale.US);
+                for (String domain : AD_DOMAINS) {
+                    if (lower.contains(domain)) {
+                        view.stopLoading();
+                        Toast.makeText(MusicActivity.this, "Popup/redirección bloqueada", Toast.LENGTH_SHORT).show();
+                        break;
+                    }
+                }
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override // >= 21
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String newUrl = request.getUrl().toString();
+                if (request == null || request.getUrl() == null) return true;
+                return handleNavigation(view, request.getUrl().toString());
+            }
 
-                // Permitir solo la URL inicial exacta
-                if (newUrl.equals(ALLOWED_URL)) {
-                    return false; // cargar normalmente
-                }
-
-                // Si es blob:, pedir al JS que lo convierta y lo envíe a Android
-                if (newUrl.startsWith("blob:")) {
-                    // Intento de nombre básico si no hay otro: file_<timestamp>
-                    String fileName = "file_" + System.currentTimeMillis();
-                    String js = "(function(){"
-                            + "var url='" + newUrl + "';"
-                            + "var name='" + fileName + "';"
-                            + "try{"
-                            + " fetch(url).then(function(r){return r.blob()}).then(function(b){"
-                            + "   var reader=new FileReader();"
-                            + "   reader.onloadend=function(){"
-                            + "     // reader.result = dataURL (data:<mime>;base64,...)"
-                            + "     window.AndroidDownloader.saveBase64(reader.result, name);"
-                            + "   };"
-                            + "   reader.readAsDataURL(b);"
-                            + " }).catch(function(e){console.log(e);});"
-                            + "}catch(e){console.log(e);}"
-                            + "})();";
-                    view.evaluateJavascript(js, null);
-                    return true; // no navegar
-                }
-
-                // Si parece un archivo descargable por URL normal, descargar
-                if (looksDownloadable(newUrl)) {
-                    startDownload(newUrl, null, null, null);
-                    return true;
-                }
-
-                // Bloquear cualquier otra navegación
-                Toast.makeText(MusicActivity.this, "Navegación bloqueada", Toast.LENGTH_SHORT).show();
-                return true;
+            @Override // < 21
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return handleNavigation(view, url);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Inyecta un capturador de clicks a <a> con href blob: para obtener filename del atributo download, si existe.
-                String hook = "(function(){"
-                        + "document.addEventListener('click', function(e){"
-                        + "  var a = e.target.closest('a');"
-                        + "  if(!a) return;"
-                        + "  var href = a.getAttribute('href')||'';"
-                        + "  if(href.startsWith('blob:')){"
-                        + "    e.preventDefault();"
-                        + "    var name = a.getAttribute('download')||('file_'+Date.now());"
-                        + "    fetch(href).then(r=>r.blob()).then(function(b){"
-                        + "      var reader=new FileReader();"
-                        + "      reader.onloadend=function(){"
-                        + "        window.AndroidDownloader.saveBase64(reader.result, name);"
-                        + "      };"
-                        + "      reader.readAsDataURL(b);"
-                        + "    }).catch(console.error);"
-                        + "  }"
-                        + "}, true);"
-                        + "})();";
-                view.evaluateJavascript(hook, null);
+                // Bloquea window.open y fuerza navegación en la misma pestaña
+                String antiPopup = "(function(){try{"
+                        + "window.open=function(){return null};"
+                        + "document.addEventListener('click',function(e){"
+                        + " var a=e.target.closest('a'); if(!a) return;"
+                        + " if((a.getAttribute('target')||'').toLowerCase()==='_blank'){e.preventDefault();"
+                        + "  var href=a.getAttribute('href')||''; if(href) location.href=href;}"
+                        + "},true);}catch(e){}})();";
+                view.evaluateJavascript(antiPopup, null);
+
+                // Hook para blobs con antirrebote en JS
+                String blobHook = "(function(){try{"
+                        + "window.__androidDownloading=window.__androidDownloading||{};"
+                        + "document.addEventListener('click',function(e){"
+                        + " var a=e.target.closest('a'); if(!a) return;"
+                        + " var href=a.getAttribute('href')||'';"
+                        + " if(href.startsWith('blob:')){"
+                        + "   e.preventDefault();"
+                        + "   if(window.__androidDownloading[href]) return;"
+                        + "   window.__androidDownloading[href]=true;"
+                        + "   var name=(a.getAttribute('download')||('file_'+Date.now()));"
+                        + "   fetch(href).then(r=>r.blob()).then(function(b){"
+                        + "     var rd=new FileReader(); rd.onloadend=function(){"
+                        + "       window.AndroidDownloader.saveBase64(rd.result,name);"
+                        + "       setTimeout(function(){delete window.__androidDownloading[href]},8000);"
+                        + "     }; rd.readAsDataURL(b);"
+                        + "   }).catch(function(){delete window.__androidDownloading[href]});"
+                        + " }"
+                        + "},true);}catch(e){}})();";
+                view.evaluateJavascript(blobHook, null);
+
                 super.onPageFinished(view, url);
             }
         });
 
-        // Bloquear nuevas ventanas / popups
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) { return false; }
+            @Override public boolean onJsBeforeUnload(WebView view, String url, String message, android.webkit.JsResult result) { if (result!=null) result.cancel(); return true; }
+            @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> c, FileChooserParams p) { Toast.makeText(MusicActivity.this,"Acción no permitida",Toast.LENGTH_SHORT).show(); return true; }
+        });
+
+        webView.setDownloadListener(new DownloadListener() {
             @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog,
-                                          boolean isUserGesture, android.os.Message resultMsg) {
-                return false; // no crear nuevas ventanas
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+                // De-dup por URL
+                if (!shouldStartOnce("URL:" + (url==null?"":url))) return;
+                startDownload(url, userAgent, contentDisposition, mimeType);
             }
         });
 
-        // Listener de descargas (para attachments reales)
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            startDownload(url, userAgent, contentDisposition, mimeType);
-        });
-
-        // Cargar la página inicial
         webView.loadUrl(ALLOWED_URL);
     }
 
-    // === Descargas por URL http/https (DownloadManager) ===
-    private void startDownload(String url, @Nullable String userAgent,
-                               @Nullable String contentDisposition, @Nullable String mimeType) {
+    // Manejo común de navegación + de-dup
+    private boolean handleNavigation(WebView view, String newUrl) {
+        if (newUrl == null || newUrl.isEmpty()) return true;
+        String lower = newUrl.toLowerCase(Locale.US);
 
-        // Ignorar la segunda descarga
-        if (downloadCount == 1) {
-            downloadCount++;
-            Toast.makeText(this, "La segunda descarga fue eliminada", Toast.LENGTH_SHORT).show();
-            return;
+        // Bloquear esquemas no deseados
+        if (lower.startsWith("intent:")||lower.startsWith("market:")||lower.startsWith("mailto:")||
+                lower.startsWith("tel:")||lower.startsWith("sms:")||lower.startsWith("geo:")||
+                lower.startsWith("about:blank")) {
+            Toast.makeText(this,"Enlace bloqueado",Toast.LENGTH_SHORT).show();
+            return true;
         }
 
-        downloadCount++; // contar este intento
+        // blob: -> lo manejamos con JS; aquí solo antirrebote extra por si llega
+        if (lower.startsWith("blob:")) {
+            if (!shouldStartOnce("BLOB:" + newUrl)) return true;
+            String js = "(function(){var u='"+jsEscape(newUrl)+"',n='file_'+Date.now();"
+                    + "try{fetch(u).then(r=>r.blob()).then(function(b){var R=new FileReader();"
+                    + "R.onloadend=function(){AndroidDownloader.saveBase64(R.result,n)};"
+                    + "R.readAsDataURL(b);});}catch(e){}})();";
+            view.evaluateJavascript(js, null);
+            return true;
+        }
 
+        // Mismo origin
+        if (isSameOrigin(newUrl)) {
+            if (looksDownloadable(newUrl)) {
+                if (!shouldStartOnce("URL:" + newUrl)) return true;
+                startDownload(newUrl, null, null, null);
+                return true;
+            }
+            return false;
+        }
+
+        Toast.makeText(this,"Navegación bloqueada",Toast.LENGTH_SHORT).show();
+        return true;
+    }
+
+    // === DownloadManager ===
+    private void startDownload(String url, @Nullable String userAgent,
+                               @Nullable String contentDisposition, @Nullable String mimeType) {
         String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+        fileName = sanitizeFilename(fileName);
 
         try {
             DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
-
             String cookies = CookieManager.getInstance().getCookie(url);
             if (cookies != null) req.addRequestHeader("Cookie", cookies);
             if (userAgent != null) req.addRequestHeader("User-Agent", userAgent);
+
+            // Forzamos MIME razonable si viene vacía/genérica y la extensión lo indica
+            String ext = getExt(fileName);
+            String fixedMime = strongMimeFromExt(ext);
+            if (mimeType == null || mimeType.isEmpty() || "text/plain".equals(mimeType) || "application/octet-stream".equals(mimeType)) {
+                mimeType = fixedMime != null ? fixedMime : mimeType;
+            }
             if (mimeType != null) req.setMimeType(mimeType);
 
-            // 👉 Notificación del sistema para descargas normales
             req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             req.allowScanningByMediaScanner();
             req.setTitle(fileName);
@@ -243,7 +261,7 @@ public class MusicActivity extends AppCompatActivity {
             req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
 
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            dm.enqueue(req);
+            if (dm != null) dm.enqueue(req);
 
             Toast.makeText(this, "Descarga iniciada: " + fileName, Toast.LENGTH_SHORT).show();
 
@@ -252,30 +270,50 @@ public class MusicActivity extends AppCompatActivity {
         }
     }
 
-    // === Guardado de blobs (dataURL -> bytes) ===
+    // === Guardado de blobs ===
     private static class BlobSaver {
         private final Context ctx;
         BlobSaver(Context ctx){ this.ctx = ctx.getApplicationContext(); }
 
         @JavascriptInterface
-        public void saveBase64(String dataUrl, String fileName) {
-            // Ignorar la segunda descarga
-            if (MusicActivity.downloadCount == 1) {
-                MusicActivity.downloadCount++;
-                Toast.makeText(ctx, "La segunda descarga (blob) fue eliminada", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            MusicActivity.downloadCount++;
-
+        public void saveBase64(String dataUrl, String suggestedName) {
             try {
-                int comma = dataUrl.indexOf(',');
-                String base64 = (comma > 0) ? dataUrl.substring(comma + 1) : dataUrl;
+                String mime = "application/octet-stream";
+                int comma = dataUrl != null ? dataUrl.indexOf(',') : -1;
+                if (dataUrl != null && dataUrl.startsWith("data:")) {
+                    int semi = dataUrl.indexOf(';');
+                    int coma = dataUrl.indexOf(',');
+                    if (semi > 5 && semi < coma) mime = dataUrl.substring(5, semi);
+                }
+
+                String base64 = (comma > 0) ? dataUrl.substring(comma + 1) : (dataUrl == null ? "" : dataUrl);
                 byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+
+                // --- Normalización de nombre/extensión ---
+                String cleanName = sanitizeFilename(suggestedName);
+                String extFromName = getExt(cleanName); // puede ser null
+                String extFromMime = guessExtensionFromMime(mime);
+
+                // Si el nombre ya trae una extensión conocida (mp3, flac, mp4, etc.), la respetamos SIEMPRE
+                if (extFromName == null || extFromName.isEmpty() || !AUDIO_VIDEO_IMG_EXTS.contains(extFromName)) {
+                    // Nombre sin extensión válida → usamos la del MIME si es útil
+                    if (extFromMime != null && !"bin".equals(extFromMime)) {
+                        cleanName = stripExt(cleanName) + "." + extFromMime;
+                    }
+                }
+
+                // Ajusta MIME si viene "text/plain" / genérico pero la extensión dice otra cosa
+                String finalExt = getExt(cleanName);
+                String strongMime = strongMimeFromExt(finalExt);
+                if (strongMime != null &&
+                        ("text/plain".equals(mime) || "application/octet-stream".equals(mime) || mime == null)) {
+                    mime = strongMime;
+                }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ContentValues values = new ContentValues();
-                    values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
-                    values.put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream");
+                    values.put(MediaStore.Downloads.DISPLAY_NAME, cleanName);
+                    values.put(MediaStore.Downloads.MIME_TYPE, mime != null ? mime : "application/octet-stream");
                     values.put(MediaStore.Downloads.IS_PENDING, 1);
 
                     Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
@@ -283,6 +321,7 @@ public class MusicActivity extends AppCompatActivity {
                     if (item == null) throw new Exception("No se pudo crear archivo");
 
                     try (OutputStream os = ctx.getContentResolver().openOutputStream(item)) {
+                        if (os == null) throw new Exception("No se pudo abrir output stream");
                         os.write(bytes);
                     }
 
@@ -293,37 +332,118 @@ public class MusicActivity extends AppCompatActivity {
                 } else {
                     File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     if (!dir.exists()) dir.mkdirs();
-                    File out = new File(dir, fileName);
+                    File out = new File(dir, cleanName);
                     try (OutputStream os = new FileOutputStream(out)) {
                         os.write(bytes);
                     }
                 }
 
-                Toast.makeText(ctx, "Descargado: " + fileName, Toast.LENGTH_SHORT).show();
+                Toast.makeText(ctx, "Descargado: " + cleanName, Toast.LENGTH_SHORT).show();
 
             } catch (Exception e) {
                 Toast.makeText(ctx, "Error al guardar blob", Toast.LENGTH_SHORT).show();
             }
         }
-        private String guessExtensionFromMime(String mime) {
-            String ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime);
-            if (ext == null || ext.isEmpty()) {
-                if (mime.equals("audio/flac")) return "flac";
-                if (mime.equals("audio/mpeg")) return "mp3";
-                if (mime.equals("audio/mp4")) return "m4a";
-                if (mime.equals("application/pdf")) return "pdf";
-                if (mime.equals("image/png")) return "png";
-                if (mime.equals("image/jpeg")) return "jpg";
-                if (mime.equals("video/mp4")) return "mp4";
-                return "bin";
-            }
-            return ext;
+
+        private static String guessExtensionFromMime(String mime) {
+            if (mime == null) return "bin";
+            String ext = null;
+            try { ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mime); } catch (Exception ignored) {}
+            if (ext != null && !ext.isEmpty()) return ext.toLowerCase(Locale.US);
+            // Fallbacks útiles
+            if ("audio/flac".equals(mime)) return "flac";
+            if ("audio/mpeg".equals(mime)) return "mp3";
+            if ("audio/mp4".equals(mime)) return "m4a";
+            if ("application/pdf".equals(mime)) return "pdf";
+            if ("image/png".equals(mime)) return "png";
+            if ("image/jpeg".equals(mime)) return "jpg";
+            if ("video/mp4".equals(mime)) return "mp4";
+            return "bin";
         }
+
+        private static String sanitizeFilename(String name) {
+            if (name == null || name.trim().isEmpty()) return "file_" + System.currentTimeMillis();
+            name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
+            name = name.replaceAll("\\s+", " ").trim();
+            if (name.length() > 100) name = name.substring(0, 100);
+            return name;
+        }
+
+        private static String getExt(String name) {
+            if (name == null) return null;
+            int dot = name.lastIndexOf('.');
+            if (dot <= 0 || dot == name.length()-1) return null;
+            return name.substring(dot+1).toLowerCase(Locale.US);
+        }
+
+        private static String stripExt(String name) {
+            if (name == null) return "";
+            int dot = name.lastIndexOf('.');
+            if (dot <= 0) return name;
+            return name.substring(0, dot);
+        }
+
+        private static String strongMimeFromExt(String ext) {
+            if (ext == null) return null;
+            Map<String,String> map = new HashMap<>();
+            map.put("mp3","audio/mpeg");
+            map.put("flac","audio/flac");
+            map.put("m4a","audio/mp4");
+            map.put("aac","audio/aac");
+            map.put("wav","audio/wav");
+            map.put("ogg","audio/ogg");
+            map.put("mp4","video/mp4");
+            map.put("webm","video/webm");
+            map.put("mkv","video/x-matroska");
+            map.put("avi","video/x-msvideo");
+            map.put("mov","video/quicktime");
+            map.put("jpg","image/jpeg");
+            map.put("jpeg","image/jpeg");
+            map.put("png","image/png");
+            map.put("gif","image/gif");
+            map.put("webp","image/webp");
+            map.put("pdf","application/pdf");
+            map.put("epub","application/epub+zip");
+            map.put("zip","application/zip");
+            map.put("rar","application/vnd.rar");
+            map.put("7z","application/x-7z-compressed");
+            map.put("apk","application/vnd.android.package-archive");
+            map.put("xapk","application/vnd.android.package-archive");
+            return map.get(ext);
+        }
+    }
+
+    // === util ext/mime (Activity) ===
+    private static String getExt(String name){
+        if (name == null) return null;
+        int dot = name.lastIndexOf('.');
+        if (dot <= 0 || dot == name.length()-1) return null;
+        return name.substring(dot+1).toLowerCase(Locale.US);
+    }
+    private static String stripExt(String name){
+        if (name == null) return "";
+        int dot = name.lastIndexOf('.');
+        if (dot <= 0) return name;
+        return name.substring(0, dot);
+    }
+    private static String strongMimeFromExt(String ext){
+        return BlobSaver.strongMimeFromExt(ext);
+    }
+
+    // De-dup por clave (URL:, BLOB:, NAME:)
+    private synchronized boolean shouldStartOnce(String key){
+        long now = System.currentTimeMillis();
+        // limpia entradas viejas
+        recentKeys.entrySet().removeIf(e -> now - e.getValue() > DEDUP_WINDOW_MS);
+        Long last = recentKeys.get(key);
+        if (last != null && now - last < DEDUP_WINDOW_MS) return false;
+        recentKeys.put(key, now);
+        return true;
     }
 
     private boolean looksDownloadable(String url) {
         try {
-            String lower = url.toLowerCase();
+            String lower = url.toLowerCase(Locale.US);
             int q = lower.indexOf('?');
             if (q >= 0) lower = lower.substring(0, q);
             int lastDot = lower.lastIndexOf('.');
@@ -335,27 +455,52 @@ public class MusicActivity extends AppCompatActivity {
         return false;
     }
 
-    // === Permisos (solo Android 9 o menor) ===
+    private boolean isSameOrigin(String url) {
+        try {
+            Uri u = Uri.parse(url);
+            if (u == null || allowedOrigin == null) return false;
+            boolean scheme = safeEq(allowedOrigin.getScheme(), u.getScheme());
+            boolean host = safeEq(allowedOrigin.getHost(), u.getHost());
+            int portAllowed = allowedOrigin.getPort() == -1 ? defaultPort(allowedOrigin.getScheme()) : allowedOrigin.getPort();
+            int portNew = u.getPort() == -1 ? defaultPort(u.getScheme()) : u.getPort();
+            return scheme && host && portAllowed == portNew;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean safeEq(String a, String b) { return a != null && b != null && a.equalsIgnoreCase(b); }
+    private static int defaultPort(String scheme) { if (scheme==null) return -1; if ("http".equalsIgnoreCase(scheme)) return 80; if ("https".equalsIgnoreCase(scheme)) return 443; return -1; }
+    private static String jsEscape(String s) { if (s == null) return ""; return s.replace("\\","\\\\").replace("'","\\'"); }
+
     private void requestLegacyWritePermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) { // API 28 o menor
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        RC_WRITE
-                );
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, RC_WRITE);
             }
         }
     }
 
     @Override
     public void onBackPressed() {
-        // Normalmente no habrá historial, pero por si recargan la misma URL
         if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+            if (isSameOrigin(webView.getUrl())) {
+                webView.goBack();
+            } else {
+                webView.loadUrl(ALLOWED_URL);
+            }
         } else {
             super.onBackPressed();
         }
+    }
+
+    // Sanea nombres de DownloadManager
+    private static String sanitizeFilename(String name) {
+        if (name == null || name.trim().isEmpty()) return "file_" + System.currentTimeMillis();
+        name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
+        name = name.replaceAll("\\s+", " ").trim();
+        if (name.length() > 100) name = name.substring(0, 100);
+        return name;
     }
 }
