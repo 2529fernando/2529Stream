@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
-    // id 'org.jetbrains.kotlin.android' // ← sólo si tienes código Kotlin
+
 }
 
 android {
@@ -50,11 +50,16 @@ dependencies {
     implementation 'androidx.media:media:1.7.0'
 
     // Firebase (BOM para alinear versiones)
-    implementation platform('com.google.firebase:firebase-bom:31.3.0')
-    implementation 'com.google.firebase:firebase-firestore-ktx'
-    implementation 'com.google.firebase:firebase-storage-ktx'   // ← sin versión; la pone el BOM
-    implementation 'com.google.firebase:firebase-messaging-ktx' // ← sin versión
+    implementation platform('com.google.firebase:firebase-bom:33.2.0')
     implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-storage'
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation platform('com.google.firebase:firebase-bom:33.2.0')
+    implementation 'com.google.firebase:firebase-firestore'
+    // ...
+
+    // FirebaseUI para Firestore (provee FirestoreRecyclerAdapter / Options)
     implementation 'com.firebaseui:firebase-ui-firestore:8.0.2'
 
     // Play Services Ads
@@ -82,6 +87,7 @@ dependencies {
 
     //Descargas
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
 
 
 

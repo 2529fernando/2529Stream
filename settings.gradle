@@ -5,9 +5,8 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        // Versiones de plugins (ajústalas si usas otra versión de Android Studio)
         id("com.android.application") version '8.13.0'
-        id("com.google.gms.google-services") version "4.4.1"
+        id("com.google.gms.google-services") version "4.4.2"
     }
 }
 
@@ -16,7 +15,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") } // necesario para ccp e imagepicker
+        maven { url = uri("https://jitpack.io") } // ccp, imagepicker, etc.
     }
 }
 

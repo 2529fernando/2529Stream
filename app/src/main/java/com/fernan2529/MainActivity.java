@@ -63,8 +63,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         vm = new ViewModelProvider(this).get(MainViewModel.class);
-        // ❌ No restauramos selección previa para forzar siempre el placeholder.
-        // vm.loadSavedSelection(this);
+
 
         setupSpinnerInMain();        // spinner interactivo (usa CategoryNavigator)
         resetSpinnerToPlaceholder(); // fuerza "Seleccione la Categoria" al abrir
@@ -77,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // También al volver al frente, para que siempre quede en el placeholder
         resetSpinnerToPlaceholder();
     }
 
@@ -86,12 +84,12 @@ public class MainActivity extends AppCompatActivity {
         if (spinner == null) return;
         userTouched = false;                 // para que no dispare navegación
         spinner.setSelection(0, false);      // coloca "Seleccione la Categoria"
-        vm.saveSelection(this, 0);           // opcional: persiste el placeholder
+        vm.saveSelection(this, 0);
     }
 
     /* =================== Spinner en Main =================== */
     private void setupSpinnerInMain() {
-        // ✅ usar el id unificado
+
         spinner = findViewById(R.id.spinner_activities);
         if (spinner == null) return;
 
@@ -101,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         if (loaded != null && loaded.length > 0) {
             categories = loaded;
         } else {
-            // fallback mínimo para evitar crash si hubiera un problema de datos
+
             categories = new String[] {"Seleccione la Categoria"};
         }
 
@@ -111,12 +109,12 @@ public class MainActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(adapter);
 
-        // Marca interacción real del usuario
+
         spinner.setOnTouchListener((v, e) -> {
             if (e.getAction() == MotionEvent.ACTION_DOWN || e.getAction() == MotionEvent.ACTION_UP) {
                 userTouched = true;
             }
-            return false; // deja que el spinner funcione normal
+            return false;
         });
 
         // Maneja selección: guarda en VM y navega con CategoryNavigator
@@ -178,7 +176,10 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean areNotificationsEnabled(@NonNull Context ctx) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
-        return nm != null && nm.areNotificationsEnabled();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return nm != null && nm.areNotificationsEnabled();
+        }
+        return true;
     }
 
     /* =================== Botones a Activities =================== */

@@ -1,6 +1,5 @@
 package com.fernan2529.model;
 
-
 import com.google.firebase.Timestamp;
 
 public class UserModel {
@@ -10,15 +9,21 @@ public class UserModel {
     private String userId;
     private String fcmToken;
 
+    // Opcionales pero recomendables para login por email/username
+    private String email;
+    private String usernameLowercase;
+
     public UserModel() {
     }
 
-    public UserModel(String phone, String username, Timestamp createdTimestamp,String userId) {
+    public UserModel(String phone, String username, Timestamp createdTimestamp, String userId) {
         this.phone = phone;
         this.username = username;
         this.createdTimestamp = createdTimestamp;
         this.userId = userId;
     }
+
+    // --- Getters / Setters ---
 
     public String getPhone() {
         return phone;
@@ -29,7 +34,7 @@ public class UserModel {
     }
 
     public String getUsername() {
-        return username;
+        return username;           // <--- NECESARIO para RecentChatRecyclerAdapter
     }
 
     public void setUsername(String username) {
@@ -45,7 +50,7 @@ public class UserModel {
     }
 
     public String getUserId() {
-        return userId;
+        return userId;             // útil en varios lugares
     }
 
     public void setUserId(String userId) {
@@ -58,5 +63,22 @@ public class UserModel {
 
     public void setFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
+    }
+
+    // Opcionales
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getUsernameLowercase() {
+        return usernameLowercase;
+    }
+
+    public void setUsernameLowercase(String usernameLowercase) {
+        this.usernameLowercase = usernameLowercase;
     }
 }

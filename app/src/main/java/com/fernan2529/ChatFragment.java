@@ -5,6 +5,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -17,56 +19,65 @@ import com.google.firebase.firestore.Query;
 
 public class ChatFragment extends Fragment {
 
-    RecyclerView recyclerView;
-    RecentChatRecyclerAdapter adapter;
+    private RecyclerView recyclerView;
+    private RecentChatRecyclerAdapter adapter;
 
+    public ChatFragment() {}
 
-    public ChatFragment() {
-    }
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        View view =  inflater.inflate(R.layout.fragment_chat, container, false);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_chat, container, false);
         recyclerView = view.findViewById(R.id.recyler_view);
         setupRecyclerView();
-
         return view;
     }
 
-    void setupRecyclerView(){
-
+    private void setupRecyclerView() {
+        // Asegúrate de tener índice compuesto para esta combinación si Firestore lo pide.
         Query query = FirebaseUtil.allChatroomCollectionReference()
-                .whereArrayContains("userIds",FirebaseUtil.currentUserId())
-                .orderBy("lastMessageTimestamp",Query.Direction.DESCENDING);
+                .whereArrayContains("userIds", FirebaseUtil.currentUserId())
+                .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
+                .limit(50);
 
-        FirestoreRecyclerOptions<ChatroomModel> options = new FirestoreRecyclerOptions.Builder<ChatroomModel>()
-                .setQuery(query,ChatroomModel.class).build();
+        FirestoreRecyclerOptions<ChatroomModel> options =
+                new FirestoreRecyclerOptions.Builder<ChatroomModel>()
+                        .setQuery(query, ChatroomModel.class)
+                        // Deja que FirebaseUI maneje start/stop según el ciclo de vida de la vista
+                        .setLifecycleOwner(getViewLifecycleOwner())
+                        .build();
 
-        adapter = new RecentChatRecyclerAdapter(options,getContext());
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new RecentChatRecyclerAdapter(options, requireContext());
+
+        LinearLayoutManager lm = new LinearLayoutManager(requireContext());
+        recyclerView.setLayoutManager(lm);
+        recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
-        adapter.startListening();
-
+        // No llames startListening() manualmente: lo gestiona setLifecycleOwner(...)
     }
 
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Evita memory leaks
+        recyclerView.setAdapter(null);
+        recyclerView = null;
+        adapter = null;
+    }
+
+    // Si prefieres controlar manualmente el ciclo de vida, elimina setLifecycleOwner(...)
+    // y descomenta estos métodos:
+    /*
+    @Override
     public void onStart() {
         super.onStart();
-        if(adapter!=null)
-            adapter.startListening();
+        if (adapter != null) adapter.startListening();
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        if(adapter!=null)
-            adapter.stopListening();
+        if (adapter != null) adapter.stopListening();
     }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if(adapter!=null)
-            adapter.notifyDataSetChanged();
-    }
+    */
 }

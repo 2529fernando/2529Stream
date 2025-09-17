@@ -73,12 +73,12 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="Enter OTP sent to your phone number"
         android:layout_gravity="center_vertical"
-        android:layout_weight="5"
         android:letterSpacing="0.08"
-        android:text="Ingresa el codigo enviado a tu numero"
+        android:textStyle="bold"
         android:textSize="25sp"
-        android:textStyle="bold" />
+        android:layout_weight="5"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -110,13 +110,12 @@
         android:gravity="center_vertical"
         android:orientation="vertical"
         android:layout_weight="10">
-
         <Button
-            android:id="@+id/login_next_btn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/btn_rounded_corner"
-            android:text="SIGUIENTE" />
+            android:text="NEXT"
+            android:id="@+id/login_next_btn"/>
         <ProgressBar
             android:layout_width="32dp"
             android:layout_height="wrap_content"
@@ -126,11 +125,11 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/resend_otp_textview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="10"
         android:gravity="center"
-        android:text="Reenviar OTP en 30 sec" />
+        android:text="Resend OTP in 30 sec"
+        android:id="@+id/resend_otp_textview"/>
 
 </LinearLayout>

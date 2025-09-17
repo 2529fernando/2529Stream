@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "387107800829",
-    "project_id": "easy-chat-backend-6ae82",
-    "storage_bucket": "easy-chat-backend-6ae82.firebasestorage.app"
+    "project_number": "736428140023",
+    "project_id": "chatbackend-bbc0e",
+    "storage_bucket": "chatbackend-bbc0e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:387107800829:android:df8c5aedd11daf8849e094",
-        "android_client_info": {
-          "package_name": "com.codingbeginner.sovary.myapplication"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAqZ1tHPUjJHxljw9WKlMg1_Q5ikXEh26A"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:387107800829:android:fe4d0319b29da21f49e094",
+        "mobilesdk_app_id": "1:736428140023:android:bcaf787ae5be5828affaf2",
         "android_client_info": {
           "package_name": "com.fernan2529"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAqZ1tHPUjJHxljw9WKlMg1_Q5ikXEh26A"
+          "current_key": "AIzaSyAIb30jdza6LDFf4ouIoeBVicAQnJl1gNk"
         }
       ],
       "services": {
