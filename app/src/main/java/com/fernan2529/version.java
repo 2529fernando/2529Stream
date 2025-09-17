@@ -269,40 +269,7 @@ public class version extends AppCompatActivity {
         }
     }
 
-    private void handleDownloadComplete(long downloadId) {
-        try {
-            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            if (dm == null) return;
 
-            DownloadManager.Query q = new DownloadManager.Query().setFilterById(downloadId);
-            Cursor c = dm.query(q);
-            if (c != null) {
-                if (c.moveToFirst()) {
-                    int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
-                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Uri apkUri = dm.getUriForDownloadedFile(downloadId); // content:// URI gestionado por DM
-                        if (apkUri != null) {
-                            if (maybeRequestUnknownSources()) {
-                                Toast.makeText(this,
-                                        "Habilita 'Instalar apps de esta fuente' y vuelve a intentar.",
-                                        Toast.LENGTH_LONG).show();
-                                c.close();
-                                return;
-                            }
-                            startInstall(apkUri);
-                        } else {
-                            Toast.makeText(this, "No se pudo obtener el archivo descargado.", Toast.LENGTH_LONG).show();
-                        }
-                    } else {
-                        Toast.makeText(this, "Descarga fallida.", Toast.LENGTH_LONG).show();
-                    }
-                }
-                c.close();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Error al preparar instalación: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
 
     private void startInstall(@NonNull Uri apkUri) {
         Intent install = new Intent(Intent.ACTION_VIEW);
@@ -315,24 +282,33 @@ public class version extends AppCompatActivity {
             Toast.makeText(this, "No se encontró instalador de paquetes.", Toast.LENGTH_LONG).show();
         }
     }
+    private void handleDownloadComplete(long downloadId) {
+        try {
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (dm == null) return;
 
-    /**
-     * Android 8.0+ requiere que el usuario permita "Instalar apps de esta fuente".
-     * Devuelve true si hay que llevar al usuario a Ajustes (aún no permitido).
-     */
-    private boolean maybeRequestUnknownSources() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            boolean allowed = getPackageManager().canRequestPackageInstalls();
-            if (!allowed) {
-                Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + getPackageName()));
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-                return true;
+            DownloadManager.Query q = new DownloadManager.Query().setFilterById(downloadId);
+            Cursor c = dm.query(q);
+            if (c != null) {
+                if (c.moveToFirst()) {
+                    int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        // ✅ En lugar de instalar, solo mostramos el aviso solicitado
+                        Toast.makeText(this,
+                                "No te olvides de desinstalar la version actual para instalar la nueva :)",
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, "Descarga fallida.", Toast.LENGTH_LONG).show();
+                    }
+                }
+                c.close();
             }
+        } catch (Exception e) {
+            Toast.makeText(this, "Error tras la descarga: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
-        return false;
     }
+
+
 
     private String ensureApkExtension(String name) {
         String trimmed = name == null ? "" : name.trim();
