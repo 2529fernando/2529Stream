@@ -19,6 +19,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -28,11 +29,16 @@ import android.widget.LinearLayout;
 import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.fernan2529.R;
 import com.fernan2529.ui.LoadingOverlayView;
+
+import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+import java.util.List;
 
 public class WebViewActivityGeneral extends AppCompatActivity {
 
@@ -70,6 +76,19 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     private String initialUrl;
     private String initialUrlNorm;
 
+    // Bloqueador de anuncios
+    private static final List<String> AD_DOMAINS = Arrays.asList(
+            "doubleclick.net",
+            "ads.google.com",
+            "googlesyndication.com",
+            "googletagservices.com",
+            "adservice.google.com",
+            "facebook.net",
+            "adform.net",
+            "outbrain.com",
+            "taboola.com"
+    );
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,25 +121,34 @@ public class WebViewActivityGeneral extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @SuppressWarnings("deprecation")
-            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                // Permite solo la URL inicial exacta (normalizada), bloquea lo demás
                 return !equalsStrict(url, initialUrlNorm);
             }
+
             @RequiresApi(21)
-            @Override public boolean shouldOverrideUrlLoading(@NonNull WebView view, @NonNull WebResourceRequest req) {
+            @Override
+            public boolean shouldOverrideUrlLoading(@NonNull WebView view, @NonNull WebResourceRequest req) {
                 return !equalsStrict(req.getUrl().toString(), initialUrlNorm);
             }
-            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
+
+            @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
                 if (loadingOverlay != null) {
                     loadingOverlay.setProgress(0f);
                     loadingOverlay.showNow();
                 }
+                // Si intenta salir, regrésalo
                 if (!equalsStrict(url, initialUrlNorm)) {
                     view.stopLoading();
                     if (initialUrl != null) view.loadUrl(initialUrl);
                 }
                 super.onPageStarted(view, url, icon);
             }
-            @Override public void onPageFinished(WebView view, String url) {
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
                 if (!equalsStrict(url, initialUrlNorm)) {
                     if (initialUrl != null) view.loadUrl(initialUrl);
                 } else {
@@ -129,14 +157,38 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 }
                 super.onPageFinished(view, url);
             }
+
+            @Nullable
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                // Bloqueo simple de dominios de anuncios
+                String reqUrl = request.getUrl().toString().toLowerCase();
+                for (String domain : AD_DOMAINS) {
+                    if (reqUrl.contains(domain)) {
+                        return new WebResourceResponse(
+                                "text/plain",
+                                "utf-8",
+                                new ByteArrayInputStream(new byte[0])
+                        );
+                    }
+                }
+                return super.shouldInterceptRequest(view, request);
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
-            @Override public boolean onCreateWindow(WebView v, boolean d, boolean g, Message m) { return false; }
+            @Override
+            public boolean onCreateWindow(WebView v, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                // No permitir popups/ventanas nuevas
+                return false;
+            }
 
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
-                if (customView != null) { callback.onCustomViewHidden(); return; }
+                if (customView != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
                 customView = view;
                 customViewCallback = callback;
                 isInFullscreen = true;
@@ -159,7 +211,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 applyZoomToTarget(1.0f);
                 zoomIndex = 0;
 
-                // 2) OVERLAY TAP (reenvía eventos al customView para NO bloquear los controles del player)
+                // 2) OVERLAY TAP
                 addTapOverlay();
 
                 // 3) CONTROLES
@@ -211,7 +263,9 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         autoHideHandler.removeCallbacks(hideControlsRunnable);
         if (controlsVisible) autoHideHandler.postDelayed(hideControlsRunnable, AUTO_HIDE_DELAY_MS);
     }
+
     private void cancelAutoHide() { autoHideHandler.removeCallbacks(hideControlsRunnable); }
+
     private void userActivity() { if (isInFullscreen) scheduleAutoHide(); }
 
     // ===== Overlay de TAP =====
@@ -230,28 +284,28 @@ public class WebViewActivityGeneral extends AppCompatActivity {
 
         final GestureDetector detector = new GestureDetector(this,
                 new GestureDetector.SimpleOnGestureListener() {
-                    @Override public boolean onSingleTapConfirmed(MotionEvent e) {
+                    @Override
+                    public boolean onSingleTapConfirmed(MotionEvent e) {
                         showControls(!controlsVisible, true);
                         if (controlsVisible) scheduleAutoHide(); else cancelAutoHide();
-                        return true; // marcamos como manejado aquí (pero igual reenviamos a customView)
+                        return true;
                     }
                 });
 
         tapOverlay.setOnTouchListener((v, ev) -> {
-            // 1) Procesa gestos para nuestro toggle/auto-hide
             detector.onTouchEvent(ev);
             userActivity();
 
-            // 2) Reenvía SIEMPRE el evento al video real, así NO se pierden los controles de la página
+            // Reenviar SIEMPRE al video real para no bloquear controles del player
             if (customView != null) {
                 customView.dispatchTouchEvent(ev);
             }
-            // 3) Consumimos nosotros (evitamos duplicados hacia padres), pero el player ya lo recibió
             return true;
         });
 
         fullscreenContainer.addView(tapOverlay);
     }
+
     private void removeTapOverlay() {
         if (tapOverlay != null) {
             fullscreenContainer.removeView(tapOverlay);
@@ -315,6 +369,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         fullscreenContainer.addView(controlsGroup);
         bringControlsToFront();
     }
+
     private void removeControlsGroup() {
         if (controlsGroup != null) {
             fullscreenContainer.removeView(controlsGroup);
@@ -323,13 +378,17 @@ public class WebViewActivityGeneral extends AppCompatActivity {
             aspectBtn = null;
         }
     }
+
     private void showControls(boolean show, boolean animate) {
         controlsVisible = show;
         if (controlsGroup == null) return;
 
         if (show) {
             controlsGroup.setVisibility(View.VISIBLE);
-            if (animate) { controlsGroup.setAlpha(0f); controlsGroup.animate().alpha(1f).setDuration(160).start(); }
+            if (animate) {
+                controlsGroup.setAlpha(0f);
+                controlsGroup.animate().alpha(1f).setDuration(160).start();
+            }
         } else {
             if (animate) {
                 controlsGroup.animate().alpha(0f).setDuration(160).withEndAction(() -> {
@@ -340,6 +399,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
             }
         }
     }
+
     private void bringControlsToFront() {
         if (controlsGroup != null) {
             controlsGroup.setElevation(20f);
@@ -363,6 +423,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         }
         return null;
     }
+
     private void applyZoomToTarget(float scale) {
         if (zoomTarget == null) return;
         zoomTarget.setPivotX(zoomTarget.getWidth() / 2f);
@@ -397,6 +458,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         }
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
+
     private void exitFullscreen() {
         View decor = getWindow().getDecorView();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -408,23 +470,25 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
-    @Override public void onBackPressed() {
+    @Override
+    public void onBackPressed() {
         if (customView != null) {
-            if (webView.getWebChromeClient() != null) {
-                ((WebChromeClient) webView.getWebChromeClient()).onHideCustomView();
-            }
+            WebChromeClient wcc = (WebChromeClient) webView.getWebChromeClient();
+            if (wcc != null) wcc.onHideCustomView();
             return;
         }
         super.onBackPressed();
     }
 
-    @Override protected void onPause() { super.onPause(); webView.onPause(); }
-    @Override protected void onResume() { super.onResume(); webView.onResume(); }
-    @Override protected void onDestroy() {
+    @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
+    @Override protected void onResume() { super.onResume(); if (webView != null) webView.onResume(); }
+    @Override
+    protected void onDestroy() {
         if (webView != null) {
             ViewGroup p = (ViewGroup) webView.getParent();
             if (p != null) p.removeView(webView);
             webView.destroy();
+            webView = null;
         }
         super.onDestroy();
     }
@@ -434,6 +498,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         if (candidate == null || initialNorm == null) return false;
         return normalizeStrict(candidate).equals(initialNorm);
     }
+
     private String normalizeStrict(String url) {
         if (url == null) return "";
         try {

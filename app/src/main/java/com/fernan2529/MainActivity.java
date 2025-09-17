@@ -188,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
         // Cabecera
         map.put(R.id.donaciones,       Reproductor.class);
         map.put(R.id.btn_juegos,       JuegosActivity.class);
-        map.put(R.id.potifyy,          musicactivity.class);
+        map.put(R.id.potifyy,          MusicActivity.class);
         map.put(R.id.btnchat,          SplashActivity.class);
         // Fila 1
         map.put(R.id.btn_navegador,    Navegation.class);
