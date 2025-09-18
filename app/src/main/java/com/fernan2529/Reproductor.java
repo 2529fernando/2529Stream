@@ -16,7 +16,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.fernan2529.Categorias.Animaciones;
+import com.fernan2529.Categorias.Anime;
 import com.fernan2529.Categorias.Comedia;
 import com.fernan2529.Categorias.Deportes;
 import com.fernan2529.Categorias.Dorama;
@@ -39,7 +39,7 @@ public class Reproductor extends AppCompatActivity {
     // === Datos del Spinner ===
     private static final String[] CATEGORY_NAMES = {
             "Seleccione la Categoria",
-            "Entretenimiento", "Peliculas", "Series", "Anime",
+            "Entretenimiento", "Peliculas", "Series", "Animepo",
             "Dorama", "Novelas", "Deportes", "Infantiles",
             "Comedia", "Historia", "Hogar", "Musica", "Noticias"
     };
@@ -49,7 +49,7 @@ public class Reproductor extends AppCompatActivity {
             Entretenimiento.class,  // "Entretenimiento"
             Peliculas.class,        // "Peliculas"
             Serie.class,           // "Serie" (se ignora para no relanzar)
-            Animaciones.class,            // "Animes"
+            Anime.class,            // "Animes"
             Dorama.class,          // "Dorama"
             Novelas.class,          // "Novelas"
             Deportes.class,         // "Deportes"

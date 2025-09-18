@@ -3,9 +3,10 @@ package com.fernan2529;
 import android.Manifest;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
-import android.content.ClipData;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -13,7 +14,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.Settings;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.URLUtil;
@@ -26,46 +26,36 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.fernan2529.ui.LoadingOverlayView; // <-- Igual que en tu otro Activity
+import com.fernan2529.ui.LoadingOverlayView;
 
 import java.util.Locale;
 
 public class version extends AppCompatActivity {
 
-    private WebView webView;
+    public static final String EXTRA_URL = "EXTRA_URL";
 
-    // Overlay de carga
+    private WebView webView;
     private LoadingOverlayView loadingOverlay;
 
-    // <input type="file">
     private ValueCallback<Uri[]> filePathCallback;
     private ActivityResultLauncher<Intent> fileChooserLauncher;
-
-    // Permisos (solo <= Android 9)
     private ActivityResultLauncher<String[]> legacyPermsLauncher;
 
-    // URL por defecto (puedes sobreescribirla con putExtra(EXTRA_URL, "https://..."))
-    public static final String EXTRA_URL = "EXTRA_URL";
     private String initialUrl = "https://2529sebastian.blogspot.com/2025/09/2529stream.html";
-
-    // ID de la descarga en curso (para instalar al completar)
     private long currentDownloadId = -1L;
 
-    // Receiver para saber cuándo acaba la descarga
-    private final android.content.BroadcastReceiver downloadReceiver = new android.content.BroadcastReceiver() {
+    private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
             if (id == currentDownloadId && id != -1L) {
                 handleDownloadComplete(id);
-                // Evitar instalaciones repetidas
-                currentDownloadId = -1L;
+                currentDownloadId = -1L; // evitar repeticiones
             }
         }
     };
@@ -75,12 +65,16 @@ public class version extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_version);
 
-        // Overlay de carga (si existe en el layout)
         loadingOverlay = findViewById(R.id.loadingOverlay);
         if (loadingOverlay != null) loadingOverlay.showNow();
 
-        // Registrar receiver del DownloadManager
-        registerReceiver(downloadReceiver, new android.content.IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        // Registrar receiver con compat para API 33+
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, filter);
+        }
 
         String urlFromIntent = getIntent().getStringExtra(EXTRA_URL);
         if (urlFromIntent != null && !urlFromIntent.trim().isEmpty()) {
@@ -90,6 +84,11 @@ public class version extends AppCompatActivity {
         setupActivityResultLaunchers();
 
         webView = findViewById(R.id.webView);
+        if (webView == null) {
+            Toast.makeText(this, "Falta el WebView con id=webView en activity_version.xml", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
         setupWebView(webView);
 
         if (savedInstanceState != null) {
@@ -106,34 +105,28 @@ public class version extends AppCompatActivity {
     }
 
     private void setupActivityResultLaunchers() {
-        // File chooser (subidas)
         fileChooserLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
-                new ActivityResultCallback<ActivityResult>() {
-                    @Override
-                    public void onActivityResult(ActivityResult result) {
-                        if (filePathCallback == null) return;
-
-                        Uri[] uris = null;
-                        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                            Intent data = result.getData();
-                            if (data.getData() != null) {
-                                uris = new Uri[]{ data.getData() };
-                            } else if (data.getClipData() != null) {
-                                ClipData clip = data.getClipData();
-                                uris = new Uri[clip.getItemCount()];
-                                for (int i = 0; i < clip.getItemCount(); i++) {
-                                    uris[i] = clip.getItemAt(i).getUri();
-                                }
+                (ActivityResult result) -> {
+                    if (filePathCallback == null) return;
+                    Uri[] uris = null;
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Intent data = result.getData();
+                        if (data.getData() != null) {
+                            uris = new Uri[]{ data.getData() };
+                        } else if (data.getClipData() != null) {
+                            int count = data.getClipData().getItemCount();
+                            uris = new Uri[count];
+                            for (int i = 0; i < count; i++) {
+                                uris[i] = data.getClipData().getItemAt(i).getUri();
                             }
                         }
-                        filePathCallback.onReceiveValue(uris);
-                        filePathCallback = null;
                     }
+                    filePathCallback.onReceiveValue(uris);
+                    filePathCallback = null;
                 }
         );
 
-        // Permisos de almacenamiento (solo para APIs antiguas)
         legacyPermsLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestMultiplePermissions(),
                 result -> { /* informativo */ }
@@ -157,32 +150,42 @@ public class version extends AppCompatActivity {
         }
         CookieManager.getInstance().setAcceptCookie(true);
 
-        // Navegación interna + loading al inicio/fin
         wv.setWebViewClient(new WebViewClient() {
+            // Compat (API < 21)
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String scheme = uri.getScheme() != null ? uri.getScheme() : "";
-                if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
-                    return false; // manejar en el WebView
-                } else {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (ActivityNotFoundException e) {
-                        Toast.makeText(version.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
-                    }
-                    return true;
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                try {
+                    return handleOverride(Uri.parse(url));
+                } catch (Exception e) {
+                    return false;
                 }
             }
 
-            // ⬇️ Aquí mostramos el overlay al iniciar carga
+            // API 21+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return handleOverride(request.getUrl());
+            }
+
+            private boolean handleOverride(Uri uri) {
+                String scheme = uri.getScheme() != null ? uri.getScheme() : "";
+                if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")) {
+                    return false; // seguir en el WebView
+                }
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(version.this, "No hay app para abrir este enlace.", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 showLoadingOnPageStart();
                 super.onPageStarted(view, url, favicon);
             }
 
-            // ⬇️ Y lo ocultamos cuando termina
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (loadingOverlay != null) loadingOverlay.fadeOut();
@@ -190,7 +193,6 @@ public class version extends AppCompatActivity {
             }
         });
 
-        // Descargas (solo APK, guardar en /Download, instalar al terminar)
         wv.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
@@ -198,7 +200,6 @@ public class version extends AppCompatActivity {
             }
         });
 
-        // Soporte para <input type="file"> y progreso de carga
         wv.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> filePath, FileChooserParams fileChooserParams) {
@@ -207,22 +208,21 @@ public class version extends AppCompatActivity {
                 try {
                     intent = fileChooserParams.createIntent();
                 } catch (Exception e) {
-                    intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    intent.setType("*/*");
+                    intent = new Intent(Intent.ACTION_GET_CONTENT)
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("*/*");
                 }
                 try {
                     fileChooserLauncher.launch(intent);
                 } catch (ActivityNotFoundException e) {
-                    Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
-                    fallback.addCategory(Intent.CATEGORY_OPENABLE);
-                    fallback.setType("*/*");
+                    Intent fallback = new Intent(Intent.ACTION_GET_CONTENT)
+                            .addCategory(Intent.CATEGORY_OPENABLE)
+                            .setType("*/*");
                     fileChooserLauncher.launch(fallback);
                 }
                 return true;
             }
 
-            // ⬇️ Actualizamos barra/overlay con el progreso real
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 if (loadingOverlay != null) {
@@ -235,7 +235,6 @@ public class version extends AppCompatActivity {
         });
     }
 
-    // ---- Método helper reutilizable (igual patrón que en tu otro Activity)
     private void showLoadingOnPageStart() {
         if (loadingOverlay != null) {
             loadingOverlay.setProgress(0f);
@@ -244,20 +243,17 @@ public class version extends AppCompatActivity {
     }
 
     /**
-     * Descarga solo APK y los guarda en la carpeta pública "Download".
-     * Al terminar, se instala automáticamente (con intervención del usuario).
+     * Descarga únicamente APKs a la carpeta pública "Download" y al terminar inicia la instalación.
      */
     private void handleDownloadApkOnly(String url, String userAgent, String contentDisposition, String mimeTypeIn) {
-        // Nombre sugerido
         String guessedName = URLUtil.guessFileName(url, contentDisposition, mimeTypeIn);
         if (guessedName == null || guessedName.trim().isEmpty()) {
             guessedName = "app_" + System.currentTimeMillis() + ".apk";
         }
         String filename = ensureApkExtension(guessedName);
 
-        // Heurística: validar que "parece" un APK
-        String lowerUrl = url == null ? "" : url.toLowerCase(Locale.US);
-        String lowerCd  = contentDisposition == null ? "" : contentDisposition.toLowerCase(Locale.US);
+        String lowerUrl  = url == null ? "" : url.toLowerCase(Locale.US);
+        String lowerCd   = contentDisposition == null ? "" : contentDisposition.toLowerCase(Locale.US);
         String lowerMime = mimeTypeIn == null ? "" : mimeTypeIn.toLowerCase(Locale.US);
 
         boolean looksLikeApk =
@@ -285,19 +281,17 @@ public class version extends AppCompatActivity {
         try {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
 
-            // Cookies y UA (útil si requiere sesión)
             String cookies = CookieManager.getInstance().getCookie(url);
             if (cookies != null) request.addRequestHeader("Cookie", cookies);
             if (userAgent != null) request.addRequestHeader("User-Agent", userAgent);
 
-            // Forzar MIME de APK
             request.setMimeType("application/vnd.android.package-archive");
             request.setTitle(filename);
             request.setDescription("Descargando APK…");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.allowScanningByMediaScanner();
 
-            // SIEMPRE: carpeta pública "Download"
+            // Carpeta pública "Download" (válido en Q+ sin permiso; en <=P requiere WRITE_EXTERNAL_STORAGE)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
 
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
@@ -313,10 +307,10 @@ public class version extends AppCompatActivity {
     }
 
     private void startInstall(@NonNull Uri apkUri) {
-        Intent install = new Intent(Intent.ACTION_VIEW);
-        install.setDataAndType(apkUri, "application/vnd.android.package-archive");
-        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent install = new Intent(Intent.ACTION_VIEW)
+                .setDataAndType(apkUri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(install);
         } catch (ActivityNotFoundException e) {
@@ -335,9 +329,13 @@ public class version extends AppCompatActivity {
                 if (c.moveToFirst()) {
                     int status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Toast.makeText(this,
-                                "No te olvides de desinstalar la versión actual para instalar la nueva :)",
-                                Toast.LENGTH_LONG).show();
+                        Uri fileUri = dm.getUriForDownloadedFile(downloadId); // content:// seguro
+                        if (fileUri != null) {
+                            Toast.makeText(this, "APK descargado. Abriendo instalador…", Toast.LENGTH_SHORT).show();
+                            startInstall(fileUri);
+                        } else {
+                            Toast.makeText(this, "Descargado, pero no se pudo abrir el archivo.", Toast.LENGTH_LONG).show();
+                        }
                     } else {
                         Toast.makeText(this, "Descarga fallida.", Toast.LENGTH_LONG).show();
                     }
@@ -353,9 +351,7 @@ public class version extends AppCompatActivity {
         String trimmed = name == null ? "" : name.trim();
         if (!trimmed.toLowerCase(Locale.US).endsWith(".apk")) {
             int dot = trimmed.lastIndexOf('.');
-            if (dot > 0) {
-                trimmed = trimmed.substring(0, dot);
-            }
+            if (dot > 0) trimmed = trimmed.substring(0, dot);
             trimmed = trimmed + ".apk";
         }
         return trimmed;

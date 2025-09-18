@@ -13,7 +13,7 @@ public final class CategoryNavigator {
             case 1:  return new Intent(ctx, com.fernan2529.Categorias.Entretenimiento.class);
             case 2:  return new Intent(ctx, com.fernan2529.Categorias.Peliculas.class);
             case 3:  return new Intent(ctx, com.fernan2529.Categorias.Serie.class);
-            case 4:  return new Intent(ctx, com.fernan2529.Categorias.Animaciones.class);
+            case 4:  return new Intent(ctx, com.fernan2529.Categorias.Anime.class);
             case 5:  return new Intent(ctx, com.fernan2529.Categorias.Dorama.class);
             case 6:  return new Intent(ctx, com.fernan2529.Categorias.Novelas.class);
             case 7:  return new Intent(ctx, com.fernan2529.Categorias.Deportes.class);

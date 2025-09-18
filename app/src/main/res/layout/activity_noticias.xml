@@ -24,7 +24,6 @@
             app:layout_constraintVertical_bias="0.0"
             app:srcCompat="@mipmap/noticias" />
 
-
         <ImageView
             android:id="@+id/imageView3"
             android:layout_width="wrap_content"
@@ -44,7 +43,6 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
-
             android:layout_marginEnd="40dp"
             android:backgroundTint="#676767"
             android:text="INICIO"
@@ -60,7 +58,6 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
-
             android:layout_marginStart="148dp"
             android:layout_marginEnd="11dp"
             android:backgroundTint="#676767"
@@ -71,19 +68,18 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.14" />
 
+        <!-- Spinner con mismo estilo que los otros -->
         <Spinner
             android:id="@+id/spinner_activities"
             android:layout_width="366dp"
             android:layout_height="50dp"
             android:layout_marginTop="170dp"
             android:layout_marginBottom="20dp"
-            android:background="#000000"
-            android:backgroundTint="#FFFFFF"
+            android:background="@drawable/spinner_with_chevron"
             app:layout_constraintBottom_toTopOf="@+id/nbcnews"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
 
         <ImageView
             android:id="@+id/nbcnews"
@@ -92,7 +88,7 @@
             app:layout_constraintBottom_toTopOf="@+id/cbs"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/spinner_activities"
+            app:layout_constraintTop_toBottomOf="@id/spinner_activities"
             app:srcCompat="@mipmap/nbcnews" />
 
         <ImageView
@@ -108,7 +104,6 @@
             android:id="@+id/bbcnews"
             android:layout_width="wrap_content"
             android:layout_height="150dp"
-
             app:layout_constraintBottom_toTopOf="@+id/cnn"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -119,15 +114,11 @@
             android:id="@+id/cnn"
             android:layout_width="wrap_content"
             android:layout_height="150dp"
-
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/bbcnews"
             app:srcCompat="@mipmap/cnnn" />
-
-
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

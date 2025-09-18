@@ -77,14 +77,14 @@
             android:layout_height="50dp"
             android:layout_marginTop="170dp"
             android:layout_marginBottom="20dp"
-            android:background="#000000"
-            android:backgroundTint="#FFFFFF"
+            android:background="@drawable/spinner_with_chevron"
             app:layout_constraintBottom_toTopOf="@+id/sony"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.511"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="1.0" />
+
 
         <ImageView
             android:id="@+id/sony"

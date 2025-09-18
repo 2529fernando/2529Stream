@@ -33,21 +33,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="160dp"
                 android:layout_gravity="center"
-                android:scaleType="fitCenter"
                 android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
                 android:src="@mipmap/titu" />
+
             <ImageView
                 android:id="@+id/logo"
                 android:layout_width="wrap_content"
-                android:layout_height="56dp"
+                android:layout_height="61dp"
                 android:layout_gravity="start|top"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="12dp"
                 android:contentDescription="@string/app_name"
                 android:src="@mipmap/ic__stream_launcher" />
+
             <ImageView
                 android:id="@+id/donaciones"
-                android:layout_width="72dp"
+                android:layout_width="83dp"
                 android:layout_height="40dp"
                 android:layout_gravity="start|bottom"
                 android:layout_marginStart="20dp"
@@ -56,10 +58,9 @@
                 android:src="@mipmap/paypa" />
 
 
-
             <Button
                 android:id="@+id/btn_juegos"
-                android:layout_width="wrap_content"
+                android:layout_width="98dp"
                 android:layout_height="44dp"
                 android:layout_gravity="start|bottom"
                 android:layout_marginStart="12dp"
@@ -71,8 +72,8 @@
 
             <ImageView
                 android:id="@+id/potifyy"
-                android:layout_width="130dp"
-                android:layout_height="45dp"
+                android:layout_width="154dp"
+                android:layout_height="47dp"
                 android:layout_gravity="center|bottom"
                 android:layout_marginBottom="12dp"
                 android:contentDescription="@string/app_name"
@@ -80,7 +81,7 @@
 
             <Button
                 android:id="@+id/btnchat"
-                android:layout_width="wrap_content"
+                android:layout_width="78dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end|bottom"
                 android:layout_marginEnd="12dp"
@@ -95,7 +96,7 @@
         <Button
             android:id="@+id/btn_navegador"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:backgroundTint="#2196F3"
@@ -111,7 +112,7 @@
         <Button
             android:id="@+id/btn_descargas"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:layout_marginEnd="8dp"
             android:backgroundTint="#BBA600"
             android:text="DESCARGADOR"
@@ -126,7 +127,7 @@
         <Button
             android:id="@+id/descarg"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="52dp"
             android:backgroundTint="#0C9936"
             android:text="DESCARGAS"
             android:textColor="#FFFFFF"
@@ -182,30 +183,51 @@
             app:layout_constraintHorizontal_weight="1" />
 
         <!-- ====== SPINNER en Main (interactivo) ====== -->
-        <Spinner
-            android:id="@+id/spinner_activities"
+
+        <!-- Contenedor del spinner con texto superpuesto -->
+        <FrameLayout
+            android:id="@+id/spinner_container"
             android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="20dp"
-            android:background="#000000"
-            android:backgroundTint="#FFFFFF"
+            android:layout_height="65dp"
+            android:layout_marginTop="8dp"
             app:layout_constraintTop_toBottomOf="@id/btn_reproductor"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- ====== TÍTULO ====== -->
+            <Spinner
+                android:id="@+id/spinner_activities"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/spinner_with_chevron"
+                android:paddingStart="16dp"
+                android:paddingEnd="48dp"
+            />
+
+            <!-- Texto fijo, como placeholder visual -->
+            <TextView
+                android:id="@+id/spinner_hint"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingStart="20dp"
+                android:gravity="center_vertical|start"
+                android:text="Seleccionar categoría"
+                android:textColor="#000000"
+                android:textSize="16sp"
+                android:clickable="false"
+                android:focusable="false"
+                android:importantForAccessibility="no" />
+        </FrameLayout>
         <TextView
             android:id="@+id/agregados"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="30dp"
             android:text="Agregados Recientemente"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/spinner_container"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/spinner_activities" />
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <!-- ====== POSTERS ====== -->
         <ImageView

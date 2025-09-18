@@ -13,7 +13,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-
         <ImageView
             android:id="@+id/historia"
             android:layout_width="wrap_content"
@@ -44,7 +43,6 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
-
             android:layout_marginEnd="40dp"
             android:backgroundTint="#676767"
             android:text="INICIO"
@@ -60,7 +58,6 @@
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
-
             android:layout_marginStart="148dp"
             android:layout_marginEnd="11dp"
             android:backgroundTint="#676767"
@@ -71,19 +68,18 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.171" />
 
+        <!-- Spinner con mismo estilo que los demás -->
         <Spinner
             android:id="@+id/spinner_activities"
             android:layout_width="366dp"
             android:layout_height="50dp"
             android:layout_marginTop="170dp"
             android:layout_marginBottom="20dp"
-            android:background="#000000"
-            android:backgroundTint="#FFFFFF"
+            android:background="@drawable/spinner_with_chevron"
             app:layout_constraintBottom_toTopOf="@+id/national"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
 
         <ImageView
             android:id="@+id/national"
@@ -109,14 +105,10 @@
             android:id="@+id/discovery"
             android:layout_width="wrap_content"
             android:layout_height="150dp"
-
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/history"
             app:srcCompat="@mipmap/discovery" />
-
-
-
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
