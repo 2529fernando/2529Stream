@@ -135,7 +135,7 @@ public class Entretenimiento extends AppCompatActivity {
         map.put(R.id.ae,        "https://www.televisiongratishd2.com/discovery-a-y-e-en-vivo.html");
         map.put(R.id.warner,    "https://www.tvplusgratis2.com/warner-channel-en-vivo.html");
 
-        map.put(R.id.hbo,       "https://www.tvspacehd.com/2022/10/canal-hbo.html");
+        map.put(R.id.hbo,       "https://telegratuita.com/en-vivo/hbo.php");
         map.put(R.id.space,     "https://www.tvspacehd.com/2022/10/space.html");
         map.put(R.id.tnt,       "https://www.tvspacehd.com/2022/10/canal-tnt.html");
         map.put(R.id.cww,       "https://d.daddylivehd.sx/embed/stream-300.php");

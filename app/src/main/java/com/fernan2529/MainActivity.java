@@ -229,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
     /* =================== Botones Web =================== */
     private void setupWebButtons() {
         SparseArray<Pair<String, Class<?>>> web = new SparseArray<>();
-        web.put(R.id.espn,   Pair.create("https://tvlibreonline.org/en-vivo/espn/", WebViewActivityGeneral.class));
+        web.put(R.id.espn,   Pair.create("https://www.cablevisionhd.com/espn-en-vivo.html", WebViewActivityGeneral.class));
         web.put(R.id.spidey, Pair.create("https://kllamrd.org/video/tt10872600/",   WebViewActivityGeneral.class));
         web.put(R.id.sony,   Pair.create("https://www.cablevisionhd.com/canal-sony-en-vivo.html", WebViewActivityGeneral.class));
 
