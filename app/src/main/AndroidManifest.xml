@@ -247,7 +247,12 @@
             android:exported="false" />
         <activity
             android:name=".Navegation"
-            android:exported="false" /> <!-- ===== FileProvider ===== -->
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize|uiMode" />
+
+
+        <!-- ===== FileProvider ===== -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
