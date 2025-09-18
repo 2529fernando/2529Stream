@@ -135,8 +135,8 @@ public class Novelas extends AppCompatActivity {
     // ----------------- Botones Web (todos con WebViewActivityGeneral) -----------------
     private void setupWebButtons() {
         SparseArray<String> map = new SparseArray<>();
-        map.put(R.id.tlnovelas,  "https://www.tvplusgratis2.com/tnt-novelas-en-vivo.html");
-        map.put(R.id.tntnovelas, "https://television-libre.online/html/clarovideo.html?r=TNTNOVELAS");
+        map.put(R.id.tlnovelas,  "https://www.cablevisionhd.com/tlnovelas-en-vivo.html");
+        map.put(R.id.tntnovelas, "https://www.tvplusgratis2.com/tnt-novelas-en-vivo.html");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

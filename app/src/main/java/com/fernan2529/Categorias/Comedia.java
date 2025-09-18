@@ -116,8 +116,8 @@ public class Comedia extends AppCompatActivity {
     /* =================== Web buttons =================== */
     private void setupWebButtons() {
         SparseArray<String> map = new SparseArray<>();
-        map.put(R.id.universalcomedy, "https://www.tvspacehd.com/2022/10/universal-comedy.html");
-        map.put(R.id.comedyc,         "https://www.tvspacehd.com/2022/10/comedy-central.html");
+        map.put(R.id.universalcomedy, "https://www.tvplusgratis2.com/universal-comedy-en-vivo.html");
+        map.put(R.id.comedyc,         "https://www.tvporinternet2.com/comedy-central-en-vivo-por-internet.html");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

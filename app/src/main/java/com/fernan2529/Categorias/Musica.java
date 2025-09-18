@@ -134,8 +134,8 @@ public class Musica extends AppCompatActivity {
     // ----------------- Botones Web -----------------
     private void setupWebButtons() {
         SparseArray<String> map = new SparseArray<>();
-        map.put(R.id.mtv, "https://www.tvspacehd.com/2022/10/mtv.html");
-        map.put(R.id.htv, "https://www.televisiongratishd2.com/htv-en-vivo.html");
+        map.put(R.id.mtv, "https://www.tvporinternet2.com/mtv-en-vivo-por-internet.html");
+        map.put(R.id.htv, "https://www.tvspacehd.com/2022/10/htv.html");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

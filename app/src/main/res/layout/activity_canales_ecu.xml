@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollNacionales"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:backgroundTint="#000000">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentNacionales"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="24dp">
+
+        <!-- Spinner (mismo estilo, ID unificado) -->
+        <Spinner
+            android:id="@+id/spinner_activities"
+            android:layout_width="366dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="160dp"
+            android:layout_marginBottom="20dp"
+            android:background="@drawable/spinner_with_chevron"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Logo app / cabecera -->
+        <ImageView
+            android:id="@+id/img_app_logo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="32dp"
+            android:contentDescription="@string/app_name"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@mipmap/ic__stream_launcher" />
+
+        <!-- Botones -->
+        <Button
+            android:id="@+id/button_reproductor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="148dp"
+            android:layout_marginEnd="11dp"
+            android:backgroundTint="#676767"
+            android:text="REPRODUCTOR"
+            app:layout_constraintTop_toBottomOf="@+id/img_app_logo"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btn_inicio" />
+
+        <Button
+            android:id="@+id/btn_inicio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="40dp"
+            android:backgroundTint="#676767"
+            android:text="INICIO"
+            app:layout_constraintTop_toBottomOf="@+id/img_app_logo"
+            app:layout_constraintStart_toEndOf="@+id/button_reproductor"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Imagen de Nacionales en la esquina superior derecha -->
+        <ImageView
+            android:layout_width="282dp"
+            android:layout_height="77dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="16dp"
+            android:contentDescription="Nacionales"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@mipmap/nacional" />
+
+        <!-- Card/imagen de ECUAVISA (después del spinner) -->
+        <ImageView
+            android:id="@+id/ecuavisa"
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="ECUAVISA"
+            app:layout_constraintTop_toBottomOf="@+id/spinner_activities"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:srcCompat="@mipmap/ecuavisa" />
+
+        <!-- Imagen TELEAMAZONAS debajo de ECUAVISA -->
+        <ImageView
+            android:id="@+id/teleamazonas"
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="TELEAMAZONAS"
+            app:layout_constraintTop_toBottomOf="@+id/ecuavisa"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:srcCompat="@mipmap/teleamazonas" />
+
+        <!-- Imagen TCTELE debajo de TELEAMAZONAS -->
+        <ImageView
+            android:id="@+id/tctele"
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="TCTELE"
+            app:layout_constraintTop_toBottomOf="@+id/teleamazonas"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:srcCompat="@mipmap/tctele" />
+
+        <!-- Nueva Imagen RTS debajo de TCTELE -->
+        <ImageView
+            android:id="@+id/rts"
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="RTS"
+            app:layout_constraintTop_toBottomOf="@+id/tctele"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:srcCompat="@mipmap/rts" />
+
+        <!-- Nueva Imagen TVC debajo de RTS -->
+        <ImageView
+            android:id="@+id/tvc"
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_marginBottom="24dp"
+            android:contentDescription="TVC"
+            app:layout_constraintTop_toBottomOf="@+id/rts"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:srcCompat="@mipmap/tvc" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

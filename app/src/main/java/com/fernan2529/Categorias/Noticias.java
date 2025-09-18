@@ -19,6 +19,7 @@ import com.fernan2529.MainActivity;   // cámbialo si tu inicio real es otro
 import com.fernan2529.Reproductor;
 import com.fernan2529.WebViewActivities.WebViewActivityGeneral;
 import com.fernan2529.WatchViewActivities.WatchActivityViewGeneral;
+import com.fernan2529.WebViewActivities.WebViewActivityAds;
 
 import com.fernan2529.data.CategoriesRepository;
 import com.fernan2529.nav.CategoryNavigator;
@@ -29,6 +30,7 @@ public class Noticias extends AppCompatActivity {
     private String[] categories = new String[0];
     private int indexThis = -1;           // índice real de "Noticias"
     private boolean userTouched = false;  // marca interacción real (no programática)
+    private long lastClickAt = 0L;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,12 +43,27 @@ public class Noticias extends AppCompatActivity {
         setupButton(R.id.button_reproductor, Reproductor.class);
 
         // UI
-        setupSpinner();     // ⬅️ lógica aplicada con spinner_activities
+        setupSpinner();     // lógica con spinner_activities
         setupWebButtons();
-        setupCnnTile();     // ⬅️ CNN abre WatchActivityViewGeneral
+        setupRtsShortcut(); // caso especial: abrir RTS en WebView con anuncios desde el tile bbcnews
+        setupCnnTile();     // CNN abre WatchActivityViewGeneral
     }
 
     // ----------------- Utilidades -----------------
+    private void openWebViewAds(String url) {
+        if (url == null || url.isEmpty()) return;
+        Intent intent = new Intent(this, WebViewActivityAds.class);
+        intent.putExtra("url", url);
+        startActivity(intent);
+    }
+
+    private boolean canClick() {
+        long now = System.currentTimeMillis();
+        if (now - lastClickAt < 600) return false; // 600ms debounce
+        lastClickAt = now;
+        return true;
+    }
+
     private void setupButton(int viewId, Class<?> targetActivity) {
         View v = findViewById(viewId);
         if (v != null && targetActivity != null) {
@@ -75,11 +92,10 @@ public class Noticias extends AppCompatActivity {
 
     // ----------------- Spinner con lógica unificada -----------------
     private void setupSpinner() {
-        // ✅ usamos spinner_activities (no spinner_activities3)
-        spinner = findViewById(R.id.spinner_activities);
+        spinner = findViewById(R.id.spinner_activities); // usa este ID en tu XML
         if (spinner == null) return;
 
-        // Cargar categorías desde el repositorio (consistente con todas las Activities)
+        // Cargar categorías desde el repositorio
         CategoriesRepository repo = new CategoriesRepository();
         String[] loaded = repo.getCategories();
         if (loaded != null) categories = loaded;
@@ -87,9 +103,13 @@ public class Noticias extends AppCompatActivity {
         // Detectar el índice real de esta pantalla por nombre
         indexThis = findIndex(categories, "Noticias");
 
-        // Fallback seguro si no se encuentra (Noticias suele ser 13)
+        // Fallback seguro si no se encuentra
         if (indexThis < 0) {
-            indexThis = Math.min(13, Math.max(0, categories.length - 1));
+            if (categories.length == 0) {
+                categories = new String[]{"Seleccione…", "Noticias"};
+            }
+            indexThis = Math.min(13, categories.length - 1);
+            if (indexThis < 0) indexThis = 0;
         }
 
         ArrayAdapter<String> adapter =
@@ -122,25 +142,25 @@ public class Noticias extends AppCompatActivity {
                 Intent intent = CategoryNavigator.buildIntent(Noticias.this, position);
                 if (intent == null) {
                     toast("No se pudo abrir la categoría seleccionada.");
-                    spinner.post(() -> spinner.setSelection(0, false));
+                    spinner.post(() -> spinner.setSelection(indexThis, false));
                     return;
                 }
 
                 startActivity(intent);
 
-                // Volver visualmente al placeholder para próximas selecciones
-                spinner.post(() -> spinner.setSelection(0, false));
+                // Volver visualmente al placeholder o a la posición actual
+                spinner.post(() -> spinner.setSelection(indexThis, false));
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { /* no-op */ }
         });
     }
 
-    // ----------------- Botones Web -----------------
+    // ----------------- Botones Web (sin anuncios) -----------------
     private void setupWebButtons() {
         SparseArray<String> map = new SparseArray<>();
-        map.put(R.id.nbcnews, "https://www.telegratishd.com/nbc-news-en-vivo.html");
-        map.put(R.id.cbs,     "https://www.cbsnews.com/live/");
-        map.put(R.id.bbcnews, "https://livingabroad.tv/app/bbc-news");
+        map.put(R.id.nbcnews, "https://ufreetv.com/nbc.html");
+        map.put(R.id.cbs,     "https://ufreetv.com/cbs-2-new-york.html");
+        map.put(R.id.bbcnews, "https://www.livehdtv.com/bbc-one/");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);
@@ -153,14 +173,31 @@ public class Noticias extends AppCompatActivity {
         }
     }
 
+    // ----------------- Atajo especial: abrir RTS con anuncios desde el tile bbcnews -----------------
+    private void setupRtsShortcut() {
+        View bbcBtn = findViewById(R.id.bbcnews);
+        if (bbcBtn != null) {
+            bbcBtn.setOnClickListener(v -> {
+                if (!canClick()) return;
+                String rtsUrl = "https://www.livehdtv.com/bbc-one/";
+                openWebViewAds(rtsUrl);
+            });
+        }
+    }
+
     // ----------------- Tile CNN: abrir con WatchActivityViewGeneral -----------------
     private void setupCnnTile() {
         ImageView imageViewCnn = findViewById(R.id.cnn);
         if (imageViewCnn == null) return;
 
         imageViewCnn.setOnClickListener(v -> {
+            if (!canClick()) return;
             String videoUrl = "https://d3696l48vwq25d.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-0g2918mubifjw/index.m3u8";
-            Intent intent = WatchActivityViewGeneral.newIntent(Noticias.this, videoUrl, "CNN en vivo");
+
+            // Evita depender de newIntent(); pasa extras directamente
+            Intent intent = new Intent(Noticias.this, WatchActivityViewGeneral.class);
+            intent.putExtra("url", videoUrl);
+            intent.putExtra("title", "CNN en vivo");
             startActivity(intent);
         });
     }

@@ -137,7 +137,7 @@ public class Infantiles extends AppCompatActivity {
         map.put(R.id.nick,   "https://www.cablevisionhd.com/nick-en-vivo.html");
         map.put(R.id.cn,     "https://www.cablevisionhd.com/cartoon-network-en-vivo.html");
         map.put(R.id.disney, "https://www.cablevisionhd.com/disney-channel-en-vivo.html");
-        map.put(R.id.boing,  "https://gavog.com/es/watch/span/boiiing.php");
+        map.put(R.id.boing,  "https://www.mediasetinfinity.es/directo/boing/");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

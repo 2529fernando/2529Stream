@@ -16,6 +16,7 @@ public class CategoriesRepository {
             "Historia",
             "Hogar",
             "Musica",
+            "Ecuador",
             "Noticias"
     };
 

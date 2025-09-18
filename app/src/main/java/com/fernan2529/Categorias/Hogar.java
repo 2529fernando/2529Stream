@@ -42,7 +42,7 @@ public class Hogar extends AppCompatActivity {
         View hyh = findViewById(R.id.hyh);
         if (hyh != null) {
             hyh.setOnClickListener(v ->
-                    openWebView("https://www.telegratishd.com/discovery-hyh-en-vivo.html"));
+                    openWebView("https://www.tvporinternet2.com/discovery-hyh-en-vivo-por-internet.html"));
         }
     }
 

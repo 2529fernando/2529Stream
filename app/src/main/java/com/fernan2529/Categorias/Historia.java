@@ -121,7 +121,7 @@ public class Historia extends AppCompatActivity {
         SparseArray<String> map = new SparseArray<>();
         map.put(R.id.national,  "https://www.cablevisionhd.com/nat-geo-en-vivo.html");
         map.put(R.id.history,   "https://www.cablevisionhd.com/history-en-vivo.html");
-        map.put(R.id.discovery, "https://www.telegratishd.com/discovery-channel-en-vivo.html");
+        map.put(R.id.discovery, "https://www.tvporinternet2.com/discovery-channel-en-vivo-por-internet.html");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

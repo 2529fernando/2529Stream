@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" /> <!-- ===== Lectura de medios (Android 13+) ===== -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /> <!-- ===== Compatibilidad Android 12- ===== -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -29,6 +30,18 @@
         android:theme="@style/Theme.ExoPlayerJava"
         android:usesCleartextTraffic="true"
         tools:targetApi="29">
+        <activity
+            android:name=".WatchViewActivities.WatchActivityM3UPlaylist"
+            android:exported="false" />
+        <activity
+            android:name=".WebViewActivities.WebViewActivityAds"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified" />
+        <activity
+            android:name=".Categorias.CanalesECU"
+            android:exported="false" />
         <activity
             android:name=".Categorias.Anime"
             android:exported="false" />
@@ -247,12 +260,9 @@
             android:exported="false" />
         <activity
             android:name=".Navegation"
+            android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize|uiMode"
             android:exported="false"
-            android:launchMode="singleTop"
-            android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize|uiMode" />
-
-
-        <!-- ===== FileProvider ===== -->
+            android:launchMode="singleTop" /> <!-- ===== FileProvider ===== -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

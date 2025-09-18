@@ -134,7 +134,7 @@ public class Deportes extends AppCompatActivity {
     // ----------------- Botones Web (todos con WebViewActivityGeneral) -----------------
     private void setupWebButtons() {
         SparseArray<String> map = new SparseArray<>();
-        map.put(R.id.libre,       "https://www.rojadirectatv.de/");
+        map.put(R.id.libre,       "https://futbollibre-tv.nl/");
         map.put(R.id.dsports,     "https://www.cablevisionhd.com/directv-sports-en-vivo.html");
         map.put(R.id.dsports2,    "https://www.cablevisionhd.com/directv-sports-2-en-vivo.html");
         map.put(R.id.dsportsplus, "https://www.cablevisionhd.com/directv-sports-plus-en-vivo.html");
@@ -143,13 +143,13 @@ public class Deportes extends AppCompatActivity {
         map.put(R.id.espn3,       "https://www.cablevisionhd.com/espn-3-en-vivo.html");
         map.put(R.id.espn4,       "https://www.cablevisionhd.com/espn-4-en-vivo.html");
         map.put(R.id.espnpre,     "https://www.cablevisionhd.com/espn-premium-en-vivo.html");
-        map.put(R.id.bein,        "https://www.cablevisionhd.com/bein-la-liga-en-vivo.html");
+        map.put(R.id.bein,        "https://www.cablevisionhd.com/bein-sports-extra-en-vivo.html");
         map.put(R.id.movistar,    "https://www.cablevisionhd.com/movistar-deportes-en-vivo.html");
         map.put(R.id.tntsports,   "https://www.cablevisionhd.com/tnt-sports-en-vivo.html");
-        map.put(R.id.appletv,     "https://tucanaldeportivo.com/canal10.php");
-        map.put(R.id.goltv,       "https://www.cablevisionhd.com/gol-tv-en-vivo.html");
+        map.put(R.id.appletv,     "https://ufreetv.com/fox.html");
+        map.put(R.id.goltv,       "https://www.cablevisionhd.com/gol-peru-en-vivo.html");
         map.put(R.id.caracol,     "https://cdn.chatytvgratis.net/caracoltabs.php?width=640&height=410");
-        map.put(R.id.nba,         "https://www.telegratishd.com/nba-en-vivo.html");
+        map.put(R.id.nba,         "https://masdeportesonline.com/partidos-nba/");
         map.put(R.id.foxsports,   "https://www.cablevisionhd.com/fox-sports-en-vivo.html");
 
         for (int i = 0; i < map.size(); i++) {

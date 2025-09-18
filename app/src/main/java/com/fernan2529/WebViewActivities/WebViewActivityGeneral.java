@@ -3,6 +3,7 @@ package com.fernan2529.WebViewActivities;
 import android.annotation.SuppressLint;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
@@ -32,6 +33,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.webkit.WebViewAssetLoader;
 
 import com.fernan2529.R;
 import com.fernan2529.ui.LoadingOverlayView;
@@ -61,6 +63,8 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     private LinearLayout controlsGroup;
     private ImageButton rotateBtn;
     private ImageButton aspectBtn;
+
+    private WebViewAssetLoader assetLoader;
     private boolean controlsVisible = true;
 
     // Auto-hide
@@ -90,10 +94,18 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     );
 
     @SuppressLint("SetJavaScriptEnabled")
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_web_view_general);
+
+
+
+
+
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
@@ -118,6 +130,10 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ws.setSafeBrowsingEnabled(true);
         ws.setSupportMultipleWindows(false);
         ws.setJavaScriptCanOpenWindowsAutomatically(false);
+
+        assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
 
         webView.setWebViewClient(new WebViewClient() {
             @SuppressWarnings("deprecation")
@@ -156,7 +172,88 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                     if (loadingOverlay != null) loadingOverlay.fadeOut();
                 }
                 super.onPageFinished(view, url);
+                // Inyectar reproductores para .m3u8 / .mpd / .m3u
+                injectPlayerBootstrapping(view);
             }
+
+            private void injectPlayerBootstrapping(WebView view) {
+                // Carga hls.js y dash.js una sola vez
+                String loadLibs =
+                        "(function(){\n" +
+                                "  function addScript(src){return new Promise(function(res,rej){\n" +
+                                "    if(document.querySelector('script[src=\"'+src+'\"]').dataset.loaded){res();return;}\n" +
+                                "    var s=document.createElement('script'); s.src=src; s.onload=function(){s.dataset.loaded='1';res();}; s.onerror=rej; document.head.appendChild(s);\n" +
+                                "  });}\n" +
+                                "  return Promise.all([\n" +
+                                "    addScript('https://appassets.androidplatform.net/assets/js/hls.min.js'),\n" +
+                                "    addScript('https://appassets.androidplatform.net/assets/js/dash.all.min.js')\n" +
+                                "  ]);\n" +
+                                "})();";
+
+                view.evaluateJavascript(loadLibs, null);
+
+                // Script de inicialización: detecta <video> o enlaces y engancha hls.js/dash.js
+                String initPlayers =
+                        "(async function(){\n" +
+                                "  function isHls(u){return /\\.m3u8(\\?|$)/i.test(u);} \n" +
+                                "  function isDash(u){return /\\.mpd(\\?|$)/i.test(u);} \n" +
+                                "  function isM3U(u){return /\\.m3u(\\?|$)/i.test(u);} // playlist simple\n" +
+                                "  function abs(u){try{ return new URL(u, location.href).toString(); }catch(e){ return u; }}\n" +
+                                "\n" +
+                                "  async function resolveM3U(url){\n" +
+                                "    try{ const t=await fetch(url).then(r=>r.text());\n" +
+                                "      // Toma la primera línea que parezca URL (ignorando comentarios #)\n" +
+                                "      const lines=t.split(/\\r?\\n/).map(s=>s.trim()).filter(s=>s && !s.startsWith('#'));\n" +
+                                "      if(lines.length>0){ return abs(lines[0]); }\n" +
+                                "    }catch(e){}\n" +
+                                "    return url;\n" +
+                                "  }\n" +
+                                "\n" +
+                                "  function ensureVideo(){\n" +
+                                "    let v=document.querySelector('video');\n" +
+                                "    if(!v){ v=document.createElement('video'); v.setAttribute('playsinline',''); v.setAttribute('controls',''); v.style.width='100%'; v.style.maxHeight='100vh'; document.body.appendChild(v);} \n" +
+                                "    return v;\n" +
+                                "  }\n" +
+                                "\n" +
+                                "  async function hookVideo(v){\n" +
+                                "    const src = v.getAttribute('src') || v.getAttribute('data-src') || '';\n" +
+                                "    if(!src) return;\n" +
+                                "    const url = abs(src);\n" +
+                                "    try{\n" +
+                                "      if(isHls(url)){\n" +
+                                "        if(window.Hls && window.Hls.isSupported()){\n" +
+                                "           var h=new Hls({maxBufferLength:30}); h.attachMedia(v); h.on(Hls.Events.MEDIA_ATTACHED,()=>h.loadSource(url));\n" +
+                                "        } else if(v.canPlayType('application/vnd.apple.mpegurl')){ v.src=url; }\n" +
+                                "      } else if(isDash(url)){\n" +
+                                "        if(window.dashjs){ var p=dashjs.MediaPlayer().create(); p.initialize(v, url, false); }\n" +
+                                "      } else if(isM3U(url)){\n" +
+                                "        const u=await resolveM3U(url); v.src=u;\n" +
+                                "      }\n" +
+                                "    }catch(e){ console.warn('bootstrap error', e); }\n" +
+                                "  }\n" +
+                                "\n" +
+                                "  // 1) Si ya hay <video>, lo enganchamos\n" +
+                                "  var vids=[].slice.call(document.querySelectorAll('video'));\n" +
+                                "  if(vids.length){ vids.forEach(hookVideo); }\n" +
+                                "\n" +
+                                "  // 2) Si no hay, pero la página sólo enlaza el stream, crea <video>\n" +
+                                "  if(vids.length===0){\n" +
+                                "     var a=[].slice.call(document.querySelectorAll('a[href]'));\n" +
+                                "     var link=a.map(x=>x.getAttribute('href')).map(abs).find(u=>isHls(u)||isDash(u)||isM3U(u));\n" +
+                                "     if(link){ let v=ensureVideo(); if(isM3U(link)){ link=await resolveM3U(link);} \n" +
+                                "       if(isHls(link)){\n" +
+                                "         if(window.Hls && window.Hls.isSupported()){ var h=new Hls(); h.attachMedia(v); h.on(Hls.Events.MEDIA_ATTACHED,()=>h.loadSource(link)); }\n" +
+                                "         else if(v.canPlayType('application/vnd.apple.mpegurl')){ v.src=link; }\n" +
+                                "       } else if(isDash(link)){\n" +
+                                "         if(window.dashjs){ var p=dashjs.MediaPlayer().create(); p.initialize(v, link, false); }\n" +
+                                "       } else { v.src=link; }\n" +
+                                "     }\n" +
+                                "  }\n" +
+                                "})();";
+
+                view.evaluateJavascript(initPlayers, null);
+            }
+
 
             @Nullable
             @Override
@@ -172,9 +269,27 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                         );
                     }
                 }
+                WebResourceResponse r = assetLoader.shouldInterceptRequest(request.getUrl());
+                if (r != null) return r;
+
                 return super.shouldInterceptRequest(view, request);
             }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                // Compat para < Lollipop
+                try {
+                    WebResourceResponse r = assetLoader.shouldInterceptRequest(Uri.parse(url));
+                    if (r != null) return r;
+                } catch (Exception ignored) {}
+                return super.shouldInterceptRequest(view, url);
+            }
+
         });
+
+
+
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -182,6 +297,8 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 // No permitir popups/ventanas nuevas
                 return false;
             }
+
+
 
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -220,6 +337,8 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 bringControlsToFront();
                 scheduleAutoHide();
             }
+
+
 
             @Override
             public void onHideCustomView() {

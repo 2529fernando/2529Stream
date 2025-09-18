@@ -22,7 +22,8 @@ public final class CategoryNavigator {
             case 10: return new Intent(ctx, com.fernan2529.Categorias.Historia.class);
             case 11: return new Intent(ctx, com.fernan2529.Categorias.Hogar.class);
             case 12: return new Intent(ctx, com.fernan2529.Categorias.Musica.class);
-            case 13: return new Intent(ctx, com.fernan2529.Categorias.Noticias.class);
+            case 13: return new Intent(ctx, com.fernan2529.Categorias.CanalesECU.class);
+            case 14: return new Intent(ctx, com.fernan2529.Categorias.Noticias.class);
             default: return null; // 0 u otros: no navega
         }
     }
