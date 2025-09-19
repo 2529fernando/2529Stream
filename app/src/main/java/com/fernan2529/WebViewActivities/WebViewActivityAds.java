@@ -76,6 +76,9 @@ public class WebViewActivityAds extends AppCompatActivity {
     // Navegación bloqueada a URL inicial (igual que tu actividad original)
     private String initialUrl;
     private String initialUrlNorm;
+    private String lastLoadedUrlNorm = null;
+
+    private boolean alreadyLoaded = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -133,22 +136,47 @@ public class WebViewActivityAds extends AppCompatActivity {
                     loadingOverlay.setProgress(0f);
                     loadingOverlay.showNow();
                 }
-                // Si intenta salir, lo traemos de vuelta
-                if (!equalsStrict(url, initialUrlNorm)) {
-                    view.stopLoading();
-                    if (initialUrl != null) view.loadUrl(initialUrl);
+
+                String currentNorm = normalizeStrict(url);
+
+                // 🛑 Evitar recargas de la misma URL
+                if (currentNorm.equals(lastLoadedUrlNorm)) {
+                    view.stopLoading(); // Cancela recarga redundante
+                    return;
                 }
+
+                // 🚫 Evitar navegación fuera de la inicial
+                if (!currentNorm.equals(initialUrlNorm)) {
+                    view.stopLoading();
+                    if (initialUrl != null) {
+                        view.loadUrl(initialUrl);
+                        lastLoadedUrlNorm = normalizeStrict(initialUrl);
+                    }
+                    return;
+                }
+
+                // ✅ Carga válida
+                lastLoadedUrlNorm = currentNorm;
+
                 super.onPageStarted(view, url, icon);
             }
 
+
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!equalsStrict(url, initialUrlNorm)) {
-                    if (initialUrl != null) view.loadUrl(initialUrl);
+                String currentNorm = normalizeStrict(url);
+
+                if (!currentNorm.equals(initialUrlNorm)) {
+                    if (initialUrl != null && !currentNorm.equals(lastLoadedUrlNorm)) {
+                        view.loadUrl(initialUrl);
+                        lastLoadedUrlNorm = normalizeStrict(initialUrl);
+                    }
                 } else {
                     view.clearHistory();
                     if (loadingOverlay != null) loadingOverlay.fadeOut();
+                    lastLoadedUrlNorm = currentNorm;
                 }
+
                 super.onPageFinished(view, url);
                 injectPlayerBootstrapping(view);
             }
