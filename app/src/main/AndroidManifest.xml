@@ -31,6 +31,15 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="29">
         <activity
+            android:name=".pruebas"
+            android:exported="false" />
+        <activity
+            android:name=".Novelas.novelas2"
+            android:exported="false" />
+        <activity
+            android:name=".Novelas.novelas1"
+            android:exported="false" />
+        <activity
             android:name=".WatchViewActivities.WatchActivityM3UPlaylist"
             android:exported="false" />
         <activity
