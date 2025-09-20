@@ -5,10 +5,10 @@ public class CategoriesRepository {
     private static final String[] CATEGORIES = {
             "-",
             "Anime",
+            "CanalesECU",
             "Comedia",
             "Deportes",
-            "Dorama",
-            "Ecuador",
+            "Doramas",
             "Entretenimiento",
             "Historia",
             "Hogar",
