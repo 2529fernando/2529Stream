@@ -7,43 +7,34 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.ViewModelProvider;
 
 import android.util.Pair;
 import android.util.SparseArray;
-import android.widget.Toast;
 
+import com.fernan2529.Categorias.Deportes;
+import com.fernan2529.Categorias.Entretenimiento;
+import com.fernan2529.Categorias.Peliculas;
 import com.fernan2529.Doramas.doramas3;
 import com.fernan2529.Series.series6;
 import com.fernan2529.WebViewActivities.WebViewActivityGeneral;
 import com.fernan2529.WatchViewActivities.WatchActivityViewGeneral;
-import com.fernan2529.data.CategoriesRepository;
-import com.fernan2529.nav.CategoryNavigator;
-import com.fernan2529.vm.MainViewModel;
 
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    // --- Spinner en Main ---
-    private Spinner spinner;
-    private String[] categories = new String[0];
-    private boolean userTouched = false; // distinguir restauración vs. toque real
-
-    // Anti doble click simple
     private long lastClickAt = 0L;
     private boolean canClick() {
         long now = System.currentTimeMillis();
@@ -52,102 +43,81 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
-    // Permisos (Activity Result API)
     private final ActivityResultLauncher<String[]> requestPermissionsLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {});
-
-    private MainViewModel vm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        vm = new ViewModelProvider(this).get(MainViewModel.class);
-
-
-        setupSpinnerInMain();        // spinner interactivo (usa CategoryNavigator)
-        resetSpinnerToPlaceholder(); // fuerza "Seleccione la Categoria" al abrir
-
         checkAndRequestPermissions();
         setupHeaderAndGridButtons();
         setupWebButtons();
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        resetSpinnerToPlaceholder();
-    }
 
-    /* =================== Helper para resetear Spinner =================== */
-    private void resetSpinnerToPlaceholder() {
-        if (spinner == null) return;
-        userTouched = false;                 // para que no dispare navegación
-        spinner.setSelection(0, false);      // coloca "Seleccione la Categoria"
-        vm.saveSelection(this, 0);
-    }
+        /* =================== Spinner CATEGORIAS=================== */
+            Spinner spinner = findViewById(R.id.spinner_activities);
 
-    /* =================== Spinner en Main =================== */
-    private void setupSpinnerInMain() {
+            final String[] activityNames = {
+                    "Seleccione la Categoria",
+                    "Entretenimiento",
+                    "Peliculas",
+                    "Series",
+                    "Anime",
+                    "Doramas",
+                    "Novelas",
+                    "Deportes",
+                    "Infantiles",
+                    "Comedia",
+                    "Historia",
+                    "Hogar",
+                    "Musica",
+                    "Noticias"
+            };
 
-        spinner = findViewById(R.id.spinner_activities);
-        if (spinner == null) return;
+            // 👇 Aquí el context correcto es MainActivity2.this
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                    MainActivity.this,
+                    android.R.layout.simple_spinner_item,
+                    activityNames
+            );
 
-        // Datos
-        CategoriesRepository repo = new CategoriesRepository();
-        String[] loaded = repo.getCategories();
-        if (loaded != null && loaded.length > 0) {
-            categories = loaded;
-        } else {
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
 
-            categories = new String[] {"Seleccione la Categoria"};
+            int indexThis = 1;
+            spinner.setSelection(indexThis, false);
+
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    if (position == 0 || position == indexThis) return;
+
+                    Intent intent;
+                    switch (position) {
+                        case 1:
+                            intent = new Intent(MainActivity.this, MainActivity.class);
+                            break;
+                        case 2:
+                            intent = new Intent(MainActivity.this, Entretenimiento.class);
+                            break;
+                        case 3:
+                            intent = new Intent(MainActivity.this, Peliculas.class);
+                            break;
+                        // ... resto de tus casos
+                        default:
+                            return;
+                    }
+                    startActivity(intent);
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> adapterView) { }
+            });
         }
 
-        // Adapter
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
 
-
-        spinner.setOnTouchListener((v, e) -> {
-            if (e.getAction() == MotionEvent.ACTION_DOWN || e.getAction() == MotionEvent.ACTION_UP) {
-                userTouched = true;
-            }
-            return false;
-        });
-
-        // Maneja selección: guarda en VM y navega con CategoryNavigator
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (!userTouched) return;   // ignora setSelection(0) programático
-                userTouched = false;
-
-                // Guarda la selección
-                vm.saveSelection(MainActivity.this, position);
-
-                // No navegar con placeholder (índice 0) o si fuera out-of-bounds
-                if (position <= 0 || position >= categories.length) return;
-
-                if (canClick()) {
-                    Intent intent = CategoryNavigator.buildIntent(MainActivity.this, position);
-                    if (intent != null) {
-                        startActivity(intent);
-                        // Vuelve a placeholder para próximas selecciones
-                        spinner.post(() -> {
-                            userTouched = false;
-                            spinner.setSelection(0, false);
-                            vm.saveSelection(MainActivity.this, 0);
-                        });
-                    } else {
-                        Toast.makeText(MainActivity.this, "No se pudo abrir la categoría.", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) { /* no-op */ }
-        });
-    }
 
     /* =================== Permisos =================== */
     private void checkAndRequestPermissions() {
@@ -182,6 +152,10 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
+
+
+
+
 
     /* =================== Botones a Activities =================== */
     private void setupHeaderAndGridButtons() {
