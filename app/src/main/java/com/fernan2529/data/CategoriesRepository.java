@@ -4,20 +4,20 @@ public class CategoriesRepository {
     // Fuente de datos única
     private static final String[] CATEGORIES = {
             "-",
-            "Entretenimiento",
-            "Peliculas",
-            "Series",
             "Anime",
-            "Dorama",
-            "Novelas",
-            "Deportes",
-            "Infantiles",
             "Comedia",
+            "Deportes",
+            "Dorama",
+            "Ecuador",
+            "Entretenimiento",
             "Historia",
             "Hogar",
+            "Infantiles",
             "Musica",
-            "Ecuador",
-            "Noticias"
+            "Noticias",
+            "Novelas",
+            "Peliculas",
+            "Series"
     };
 
     // Devuelve el arreglo
