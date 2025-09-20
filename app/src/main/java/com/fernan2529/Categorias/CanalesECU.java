@@ -44,7 +44,7 @@ public class CanalesECU extends AppCompatActivity {
         // UI
         setupSpinner();
         setupWebButtons();      // WebViewActivityGeneral y Ads
-        setupWatchButtons();    // WatchActivityViewGeneral
+
     }
 
     // ----------------- Utilidades -----------------
@@ -142,17 +142,6 @@ public class CanalesECU extends AppCompatActivity {
     }
 
     // ----------------- Botones Watch (HLS directo) -----------------
-    private void setupWatchButtons() {
-        View teleama = findViewById(R.id.teleamazonas);
-        if (teleama != null) {
-            teleama.setOnClickListener(v -> {
-                if (!canClick()) return;
-                String teleamaUrl = "https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/live-video=6499968.m3u8";
-                Intent i = WatchActivityViewGeneral.newIntent(CanalesECU.this, teleamaUrl, "Teleamazonas en vivo");
-                startActivity(i);
-            });
-        }
-    }
 
     // ----------------- Botones Web -----------------
     private void setupWebButtons() {
@@ -160,6 +149,7 @@ public class CanalesECU extends AppCompatActivity {
         SparseArray<String> map = new SparseArray<>();
         map.put(R.id.ecuavisa, "https://rudo.video/live/ecuavisa");
         map.put(R.id.tctele,  "https://tctelevision.com/envivo/");
+        map.put(R.id.teleamazonas,  "https://www.teleamazonas.com/teleamazonas-en-vivo/");
 
         for (int i = 0; i < map.size(); i++) {
             final int viewId = map.keyAt(i);

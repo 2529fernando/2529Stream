@@ -63,6 +63,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     private LinearLayout controlsGroup;
     private ImageButton rotateBtn;
     private ImageButton aspectBtn;
+    private ImageButton wideBtn; // NUEVO: zoom a lo ancho
 
     private WebViewAssetLoader assetLoader;
     private boolean controlsVisible = true;
@@ -71,10 +72,18 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable hideControlsRunnable = () -> showControls(false, true);
 
-    // Zoom nativo sobre la vista del video
+    // Zoom/escala sobre la vista del video
     private View zoomTarget;
     private final float[] ZOOMS = new float[]{1.0f, 1.15f, 1.33f, 1.5f, 1.75f, 2.0f};
     private int zoomIndex = 0;
+
+    // NUEVO: estiramiento horizontal extra (solo X)
+    private final float[] WZOOMS = new float[]{1.0f, 1.05f, 1.10f, 1.15f, 1.20f, 1.25f};
+    private int wZoomIndex = 0;
+
+    // Estado de escalas actuales
+    private float currentBaseScale = 1.0f; // ZOOMS[zoomIndex]
+    private float currentWideScale = 1.0f; // WZOOMS[wZoomIndex]
 
     // Navegación bloqueada
     private String initialUrl;
@@ -94,18 +103,10 @@ public class WebViewActivityGeneral extends AppCompatActivity {
     );
 
     @SuppressLint("SetJavaScriptEnabled")
-
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_web_view_general);
-
-
-
-
-
 
         if (getSupportActionBar() != null) getSupportActionBar().hide();
 
@@ -254,7 +255,6 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 view.evaluateJavascript(initPlayers, null);
             }
 
-
             @Nullable
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -288,17 +288,12 @@ public class WebViewActivityGeneral extends AppCompatActivity {
 
         });
 
-
-
-
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onCreateWindow(WebView v, boolean isDialog, boolean isUserGesture, Message resultMsg) {
                 // No permitir popups/ventanas nuevas
                 return false;
             }
-
-
 
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -325,8 +320,13 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 // Target de zoom
                 zoomTarget = findVideoSurface(customView);
                 if (zoomTarget == null) zoomTarget = customView;
-                applyZoomToTarget(1.0f);
+
+                // Reset de escalas
                 zoomIndex = 0;
+                wZoomIndex = 0;
+                currentBaseScale = 1.0f;
+                currentWideScale = 1.0f;
+                updateScales();
 
                 // 2) OVERLAY TAP
                 addTapOverlay();
@@ -338,8 +338,6 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 scheduleAutoHide();
             }
 
-
-
             @Override
             public void onHideCustomView() {
                 if (customView == null) return;
@@ -348,7 +346,12 @@ public class WebViewActivityGeneral extends AppCompatActivity {
                 removeTapOverlay();
                 removeControlsGroup();
 
-                if (zoomTarget != null) applyZoomToTarget(1.0f);
+                if (zoomTarget != null) {
+                    // Al salir, reset a 1x
+                    currentBaseScale = 1.0f;
+                    currentWideScale = 1.0f;
+                    applyZoom(1.0f, 1.0f);
+                }
                 zoomTarget = null;
 
                 fullscreenContainer.removeView(customView);
@@ -467,7 +470,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
             userActivity();
         });
 
-        // Aspecto/Zoom
+        // Zoom uniforme (aspecto)
         aspectBtn = new ImageButton(this);
         aspectBtn.setImageResource(android.R.drawable.ic_menu_crop);
         aspectBtn.setBackgroundResource(android.R.drawable.btn_default_small);
@@ -479,12 +482,32 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         aspectBtn.setLayoutParams(gap);
         aspectBtn.setOnClickListener(v -> {
             zoomIndex = (zoomIndex + 1) % ZOOMS.length;
-            applyZoomToTarget(ZOOMS[zoomIndex]);
+            // Actualiza escala base manteniendo el ancho extra
+            currentBaseScale = ZOOMS[zoomIndex];
+            updateScales();
+            userActivity();
+        });
+
+        // NUEVO: Zoom a lo ancho (solo X)
+        wideBtn = new ImageButton(this);
+        wideBtn.setImageResource(android.R.drawable.ic_menu_view);
+        wideBtn.setBackgroundResource(android.R.drawable.btn_default_small);
+        wideBtn.setContentDescription("Zoom a lo ancho (solo X)");
+        wideBtn.setAlpha(0.9f);
+        LinearLayout.LayoutParams gap2 = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        gap2.topMargin = dp(10);
+        wideBtn.setLayoutParams(gap2);
+        wideBtn.setOnClickListener(v -> {
+            wZoomIndex = (wZoomIndex + 1) % WZOOMS.length;
+            currentWideScale = WZOOMS[wZoomIndex];
+            updateScales();
             userActivity();
         });
 
         controlsGroup.addView(rotateBtn);
         controlsGroup.addView(aspectBtn);
+        controlsGroup.addView(wideBtn); // agrega el nuevo botón
         fullscreenContainer.addView(controlsGroup);
         bringControlsToFront();
     }
@@ -495,6 +518,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
             controlsGroup = null;
             rotateBtn = null;
             aspectBtn = null;
+            wideBtn = null; // limpiar referencia del nuevo botón
         }
     }
 
@@ -543,17 +567,31 @@ public class WebViewActivityGeneral extends AppCompatActivity {
         return null;
     }
 
-    private void applyZoomToTarget(float scale) {
+    // NUEVO: aplicar escalas separadas en X y Y
+    private void applyZoom(float sx, float sy) {
         if (zoomTarget == null) return;
         zoomTarget.setPivotX(zoomTarget.getWidth() / 2f);
         zoomTarget.setPivotY(zoomTarget.getHeight() / 2f);
-        zoomTarget.setScaleX(scale);
-        zoomTarget.setScaleY(scale);
+        zoomTarget.setScaleX(sx);
+        zoomTarget.setScaleY(sy);
         if (zoomTarget.getLayoutParams() instanceof FrameLayout.LayoutParams) {
             ((FrameLayout.LayoutParams) zoomTarget.getLayoutParams()).gravity = Gravity.CENTER;
         }
         zoomTarget.requestLayout();
         bringControlsToFront();
+    }
+
+    // NUEVO: combina zoom uniforme * estiramiento horizontal
+    private void updateScales() {
+        float finalX = currentBaseScale * currentWideScale;
+        float finalY = currentBaseScale;
+        applyZoom(finalX, finalY);
+    }
+
+    // Compat con llamadas existentes (si otras partes llaman este método)
+    private void applyZoomToTarget(float scale) {
+        currentBaseScale = scale;
+        updateScales();
     }
 
     // ===== Utilidades/UI =====
@@ -601,6 +639,7 @@ public class WebViewActivityGeneral extends AppCompatActivity {
 
     @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
     @Override protected void onResume() { super.onResume(); if (webView != null) webView.onResume(); }
+
     @Override
     protected void onDestroy() {
         if (webView != null) {

@@ -60,6 +60,7 @@ public class WebViewActivityAds extends AppCompatActivity {
     private LinearLayout controlsGroup;
     private ImageButton rotateBtn;
     private ImageButton aspectBtn;
+    private ImageButton wideBtn; // NUEVO: zoom horizontal (solo X)
 
     private WebViewAssetLoader assetLoader;
     private boolean controlsVisible = true;
@@ -68,17 +69,23 @@ public class WebViewActivityAds extends AppCompatActivity {
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable hideControlsRunnable = () -> showControls(false, true);
 
-    // Zoom nativo
+    // Zoom base (uniforme)
     private View zoomTarget;
     private final float[] ZOOMS = new float[]{1.0f, 1.15f, 1.33f, 1.5f, 1.75f, 2.0f};
     private int zoomIndex = 0;
 
-    // Navegación bloqueada a URL inicial (igual que tu actividad original)
+    // NUEVO: estiramiento horizontal extra (solo X)
+    private final float[] WZOOMS = new float[]{1.0f, 1.05f, 1.10f, 1.15f, 1.20f, 1.25f};
+    private int wZoomIndex = 0;
+
+    // Escalas actuales
+    private float currentBaseScale = 1.0f; // ZOOMS[zoomIndex]
+    private float currentWideScale = 1.0f; // WZOOMS[wZoomIndex]
+
+    // Navegación bloqueada a URL inicial
     private String initialUrl;
     private String initialUrlNorm;
     private String lastLoadedUrlNorm = null;
-
-    private boolean alreadyLoaded = false;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -108,7 +115,7 @@ public class WebViewActivityAds extends AppCompatActivity {
         ws.setBuiltInZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ws.setSafeBrowsingEnabled(true);
 
-        // 🔓 Permitir popups / window.open para que la publicidad funcione
+        // 🔓 Permitir popups / window.open para publicidad
         ws.setSupportMultipleWindows(true);
         ws.setJavaScriptCanOpenWindowsAutomatically(true);
 
@@ -120,7 +127,6 @@ public class WebViewActivityAds extends AppCompatActivity {
             @SuppressWarnings("deprecation")
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Mantener anclado a la URL inicial (como tu actividad original)
                 return !equalsStrict(url, initialUrlNorm);
             }
 
@@ -139,13 +145,13 @@ public class WebViewActivityAds extends AppCompatActivity {
 
                 String currentNorm = normalizeStrict(url);
 
-                // 🛑 Evitar recargas de la misma URL
+                // 🛑 Evitar recargas iguales
                 if (currentNorm.equals(lastLoadedUrlNorm)) {
-                    view.stopLoading(); // Cancela recarga redundante
+                    view.stopLoading();
                     return;
                 }
 
-                // 🚫 Evitar navegación fuera de la inicial
+                // 🚫 Evitar navegar fuera de la inicial
                 if (!currentNorm.equals(initialUrlNorm)) {
                     view.stopLoading();
                     if (initialUrl != null) {
@@ -155,12 +161,9 @@ public class WebViewActivityAds extends AppCompatActivity {
                     return;
                 }
 
-                // ✅ Carga válida
                 lastLoadedUrlNorm = currentNorm;
-
                 super.onPageStarted(view, url, icon);
             }
-
 
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -182,10 +185,11 @@ public class WebViewActivityAds extends AppCompatActivity {
             }
 
             private void injectPlayerBootstrapping(WebView view) {
-                // Carga hls.js y dash.js de appassets solo una vez
+                // Carga hls.js y dash.js una sola vez
                 String loadLibs =
                         "(function(){function a(s){return new Promise(function(res,rej){"
-                                + "if(document.querySelector('script[src=\"'+s+'\"]').dataset.loaded){res();return;}"
+                                + "var ex=document.querySelector('script[src=\"'+s+'\"];');"
+                                + "if(ex&&ex.dataset.loaded){res();return;}"
                                 + "var e=document.createElement('script');e.src=s;e.onload=function(){e.dataset.loaded='1';res();};e.onerror=rej;document.head.appendChild(e);});}"
                                 + "return Promise.all([a('https://appassets.androidplatform.net/assets/js/hls.min.js'),a('https://appassets.androidplatform.net/assets/js/dash.all.min.js')]);})();";
                 view.evaluateJavascript(loadLibs, null);
@@ -221,7 +225,7 @@ public class WebViewActivityAds extends AppCompatActivity {
             @Nullable
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                // ✅ SIN BLOQUEADOR: no filtramos dominios de anuncios
+                // ✅ SIN bloqueador (ads permitidos)
                 WebResourceResponse r = assetLoader.shouldInterceptRequest(request.getUrl());
                 if (r != null) return r;
                 return super.shouldInterceptRequest(view, request);
@@ -239,19 +243,16 @@ public class WebViewActivityAds extends AppCompatActivity {
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
-            // Manejo de window.open(): abrimos en el mismo WebView
+            // Manejo de window.open(): abrir en el mismo WebView
             @Override
             public boolean onCreateWindow(WebView v, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                // Creamos un WebView “temporal” para capturar el destino y redirigirlo al actual
                 WebView temp = new WebView(v.getContext());
                 temp.setWebViewClient(new WebViewClient(){
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                        // Respetar el anclaje a la URL inicial
                         if (equalsStrict(url, initialUrlNorm)) {
                             webView.loadUrl(url);
                         } else {
-                            // Si no coincide, volvemos a la inicial
                             if (initialUrl != null) webView.loadUrl(initialUrl);
                         }
                         return true;
@@ -296,10 +297,16 @@ public class WebViewActivityAds extends AppCompatActivity {
                 fullscreenContainer.setVisibility(View.VISIBLE);
                 webView.setVisibility(View.GONE);
 
+                // Target de zoom
                 zoomTarget = findVideoSurface(customView);
                 if (zoomTarget == null) zoomTarget = customView;
-                applyZoomToTarget(1.0f);
+
+                // Reset escalas
                 zoomIndex = 0;
+                wZoomIndex = 0;
+                currentBaseScale = 1.0f;
+                currentWideScale = 1.0f;
+                updateScales();
 
                 addTapOverlay();
                 addControlsGroup();
@@ -316,7 +323,11 @@ public class WebViewActivityAds extends AppCompatActivity {
                 removeTapOverlay();
                 removeControlsGroup();
 
-                if (zoomTarget != null) applyZoomToTarget(1.0f);
+                if (zoomTarget != null) {
+                    currentBaseScale = 1.0f;
+                    currentWideScale = 1.0f;
+                    applyZoom(1.0f, 1.0f);
+                }
                 zoomTarget = null;
 
                 fullscreenContainer.removeView(customView);
@@ -341,10 +352,9 @@ public class WebViewActivityAds extends AppCompatActivity {
                 super.onProgressChanged(view, newProgress);
             }
 
-            // (Opcional) soporte de file chooser si tus anuncios lo requieren (subidas, etc.)
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<android.net.Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                // Implementa si lo necesitas
+                // Implementa si tus anuncios lo requieren
                 return super.onShowFileChooser(webView, filePathCallback, fileChooserParams);
             }
         });
@@ -416,6 +426,7 @@ public class WebViewActivityAds extends AppCompatActivity {
         grpLp.setMargins(m, m, m, m);
         controlsGroup.setLayoutParams(grpLp);
 
+        // Rotar
         rotateBtn = new ImageButton(this);
         rotateBtn.setImageResource(android.R.drawable.ic_menu_always_landscape_portrait);
         rotateBtn.setBackgroundResource(android.R.drawable.btn_default_small);
@@ -431,6 +442,7 @@ public class WebViewActivityAds extends AppCompatActivity {
             userActivity();
         });
 
+        // Zoom uniforme
         aspectBtn = new ImageButton(this);
         aspectBtn.setImageResource(android.R.drawable.ic_menu_crop);
         aspectBtn.setBackgroundResource(android.R.drawable.btn_default_small);
@@ -442,12 +454,31 @@ public class WebViewActivityAds extends AppCompatActivity {
         aspectBtn.setAlpha(0.9f);
         aspectBtn.setOnClickListener(v -> {
             zoomIndex = (zoomIndex + 1) % ZOOMS.length;
-            applyZoomToTarget(ZOOMS[zoomIndex]);
+            currentBaseScale = ZOOMS[zoomIndex];
+            updateScales();
+            userActivity();
+        });
+
+        // NUEVO: Zoom a lo ancho (solo X)
+        wideBtn = new ImageButton(this);
+        wideBtn.setImageResource(android.R.drawable.ic_menu_view);
+        wideBtn.setBackgroundResource(android.R.drawable.btn_default_small);
+        wideBtn.setContentDescription("Zoom a lo ancho (solo X)");
+        wideBtn.setAlpha(0.9f);
+        LinearLayout.LayoutParams gap2 = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        gap2.topMargin = dp(10);
+        wideBtn.setLayoutParams(gap2);
+        wideBtn.setOnClickListener(v -> {
+            wZoomIndex = (wZoomIndex + 1) % WZOOMS.length;
+            currentWideScale = WZOOMS[wZoomIndex];
+            updateScales();
             userActivity();
         });
 
         controlsGroup.addView(rotateBtn);
         controlsGroup.addView(aspectBtn);
+        controlsGroup.addView(wideBtn); // agregar nuevo botón
         fullscreenContainer.addView(controlsGroup);
         bringControlsToFront();
     }
@@ -457,6 +488,7 @@ public class WebViewActivityAds extends AppCompatActivity {
             controlsGroup = null;
             rotateBtn = null;
             aspectBtn = null;
+            wideBtn = null;
         }
     }
     private void showControls(boolean show, boolean animate) {
@@ -501,17 +533,32 @@ public class WebViewActivityAds extends AppCompatActivity {
         }
         return null;
     }
-    private void applyZoomToTarget(float scale) {
+
+    // Aplicar escalas separadas (X,Y)
+    private void applyZoom(float sx, float sy) {
         if (zoomTarget == null) return;
         zoomTarget.setPivotX(zoomTarget.getWidth() / 2f);
         zoomTarget.setPivotY(zoomTarget.getHeight() / 2f);
-        zoomTarget.setScaleX(scale);
-        zoomTarget.setScaleY(scale);
+        zoomTarget.setScaleX(sx);
+        zoomTarget.setScaleY(sy);
         if (zoomTarget.getLayoutParams() instanceof FrameLayout.LayoutParams) {
             ((FrameLayout.LayoutParams) zoomTarget.getLayoutParams()).gravity = Gravity.CENTER;
         }
         zoomTarget.requestLayout();
         bringControlsToFront();
+    }
+
+    // Combinar zoom uniforme * estiramiento horizontal
+    private void updateScales() {
+        float finalX = currentBaseScale * currentWideScale;
+        float finalY = currentBaseScale;
+        applyZoom(finalX, finalY);
+    }
+
+    // Compat: por si otras partes llaman al viejo método
+    private void applyZoomToTarget(float scale) {
+        currentBaseScale = scale;
+        updateScales();
     }
 
     // ===== Utilidades/UI =====
