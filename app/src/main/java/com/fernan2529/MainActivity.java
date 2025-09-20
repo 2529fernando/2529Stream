@@ -55,71 +55,72 @@ public class MainActivity extends AppCompatActivity {
         setupHeaderAndGridButtons();
         setupWebButtons();
 
+        /* =================== Spinner CATEGORIAS =================== */
+        Spinner spinner = findViewById(R.id.spinner_activities3);
 
-        /* =================== Spinner CATEGORIAS=================== */
-            Spinner spinner = findViewById(R.id.spinner_activities);
+// 0 = placeholder, 1..n = categorías reales
+        final String[] activityNames = {
+                "-",               // 0 -> placeholder
+                "Entretenimiento", // 1 -> Entretenimiento.class
+                "Peliculas",       // 2 -> Peliculas.class
+                "Deportes"         // 3 -> Deportes.class
+        };
 
-            final String[] activityNames = {
-                    "Seleccione la Categoria",
-                    "Entretenimiento",
-                    "Peliculas",
-                    "Series",
-                    "Anime",
-                    "Doramas",
-                    "Novelas",
-                    "Deportes",
-                    "Infantiles",
-                    "Comedia",
-                    "Historia",
-                    "Hogar",
-                    "Musica",
-                    "Noticias"
-            };
+// Adaptador con el contexto correcto
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                MainActivity.this,
+                android.R.layout.simple_spinner_item,
+                activityNames
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
 
-            // 👇 Aquí el context correcto es MainActivity2.this
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                    MainActivity.this,
-                    android.R.layout.simple_spinner_item,
-                    activityNames
-            );
+// Mostrar el placeholder desde el inicio
+        final int indexThis = 0; // Esta Activity (inicio) NO está en la lista, usamos 0 como “-”
+        spinner.setSelection(indexThis, false);
 
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spinner.setAdapter(adapter);
+// Para evitar que onItemSelected dispare solo por el setSelection inicial
+        final boolean[] userTouched = {false};
+        spinner.setOnTouchListener((v, e) -> { userTouched[0] = true; return false; });
 
-            int indexThis = 1;
-            spinner.setSelection(indexThis, false);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // Si aún no hay interacción del usuario o es el placeholder, no navegamos
+                if (!userTouched[0] || position == 0) return;
 
-            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    if (position == 0 || position == indexThis) return;
-
-                    Intent intent;
-                    switch (position) {
-                        case 1:
-                            intent = new Intent(MainActivity.this, MainActivity.class);
-                            break;
-                        case 2:
-                            intent = new Intent(MainActivity.this, Entretenimiento.class);
-                            break;
-                        case 3:
-                            intent = new Intent(MainActivity.this, Peliculas.class);
-                            break;
-                        // ... resto de tus casos
-                        default:
-                            return;
-                    }
-                    startActivity(intent);
+                Intent intent;
+                switch (position) {
+                    case 1: // Entretenimiento
+                        intent = new Intent(MainActivity.this, Entretenimiento.class);
+                        break;
+                    case 2: // Peliculas
+                        intent = new Intent(MainActivity.this, Peliculas.class);
+                        break;
+                    case 3: // Deportes
+                        intent = new Intent(MainActivity.this, Deportes.class);
+                        break;
+                    default:
+                        return;
                 }
+                startActivity(intent);
 
-                @Override
-                public void onNothingSelected(AdapterView<?> adapterView) { }
-            });
-        }
+                // Opcional: volver a dejar el spinner en el placeholder después de navegar
+                spinner.post(() -> {
+                    userTouched[0] = false; // evitamos disparo extra
+                    spinner.setSelection(indexThis, false);
+                });
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // No se usa
+            }
+        });
+    }
 
 
-
-    /* =================== Permisos =================== */
+        /* =================== Permisos =================== */
     private void checkAndRequestPermissions() {
         List<String> toRequest = new ArrayList<>();
 
@@ -152,10 +153,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return true;
     }
-
-
-
-
 
     /* =================== Botones a Activities =================== */
     private void setupHeaderAndGridButtons() {
@@ -204,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
     private void setupWebButtons() {
         SparseArray<Pair<String, Class<?>>> web = new SparseArray<>();
         web.put(R.id.espn,   Pair.create("https://www.cablevisionhd.com/espn-en-vivo.html", WebViewActivityGeneral.class));
-        web.put(R.id.spidey, Pair.create("https://kllamrd.org/video/tt10872600/",   WebViewActivityGeneral.class));
+        web.put(R.id.spidey, Pair.create("https://kllamrd.org/video/tt10872600/", WebViewActivityGeneral.class));
         web.put(R.id.sony,   Pair.create("https://www.cablevisionhd.com/canal-sony-en-vivo.html", WebViewActivityGeneral.class));
 
         for (int i = 0; i < web.size(); i++) {
