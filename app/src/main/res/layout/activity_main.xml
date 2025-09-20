@@ -195,7 +195,7 @@
             app:layout_constraintEnd_toEndOf="parent">
 
             <Spinner
-                android:id="@+id/spinner_activities3"
+                android:id="@+id/spinner_activities"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@drawable/spinner_with_chevron"
